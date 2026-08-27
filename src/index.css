@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-mono-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 10mm 12mm 10mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide everything not meant for paper */
+  .no-print,
+  #desktop-sidebar,
+  #mobile-sidebar-drawer,
+  #mobile-sidebar-backdrop,
+  header,
+  nav,
+  button,
+  input,
+  select,
+  .action-col,
+  .no-print-action,
+  .print-actions-bar {
+    display: none !important;
+  }
+
+  /* When printing from inside PrintPreviewModal */
+  .fixed.inset-0.z-50 {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  #printable-a4-sheet {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    width: 100% !important;
+  }
+
+  /* Show elements designated for print */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Ensure containers fill page and remove shadows/radii that clip */
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .printable-report,
+  .printable-card,
+  .printable-table-container {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: transparent !important;
+  }
+
+  /* Table formatting for standard print paper */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    font-size: 9pt !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  th, td {
+    border: 1px solid #94a3b8 !important;
+    padding: 4px 6px !important;
+    color: #0f172a !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important;
+    font-weight: 800 !important;
+    text-align: right !important;
+    color: #020617 !important;
+  }
+
+  tfoot tr {
+    background-color: #e2e8f0 !important;
+    font-weight: 800 !important;
+  }
+
+  /* Summary cards and stat boxes */
+  .stat-card-print {
+    border: 1px solid #cbd5e1 !important;
+    background-color: #f8fafc !important;
+    box-shadow: none !important;
+  }
+}
+
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
+
+

@@ -1,0 +1,38 @@
+{
+  "name": "نظام إدارة الخزانة والتسوية الشهرية للصيدلية",
+  "short_name": "خزانة الصيدلية",
+  "description": "تطبيق متكامل لإدارة الخزانة اليومية، حسابات الورديات، الموردين، المصروفات، والديون مع التسوية الشهرية الدقيقة",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#059669",
+  "orientation": "any",
+  "dir": "rtl",
+  "lang": "ar",
+  "categories": ["business", "finance", "medical", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512 any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "حركة سريعة",
+      "short_name": "إضافة حركة",
+      "description": "تسجيل دخل أو سداد مورد أو مصروف جديد فوراً",
+      "url": "/?action=quick-entry",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "لوحة التسوية",
+      "short_name": "التسوية",
+      "description": "الاطلاع على مطابقة الخزانة والعجز والزيادة",
+      "url": "/?tab=dashboard",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+    }
+  ]
+}

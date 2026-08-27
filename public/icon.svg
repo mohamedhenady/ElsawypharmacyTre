@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="50%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#0f766e" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+  
+  <!-- Rounded App Icon Background -->
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)" />
+  
+  <!-- Subtle Inner Border -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="#ffffff" stroke-opacity="0.15" stroke-width="4" />
+
+  <!-- Pharmacy Cross & Treasury Safe Graphic -->
+  <g filter="url(#shadow)">
+    <!-- Base Vault / Safe Box -->
+    <rect x="96" y="130" width="320" height="260" rx="32" fill="#0f172a" stroke="#334155" stroke-width="8" />
+    
+    <!-- Vault Door Inset -->
+    <rect x="120" y="154" width="272" height="212" rx="20" fill="#1e293b" />
+    
+    <!-- Medical Cross Badge in Center -->
+    <g transform="translate(256, 260)">
+      <!-- Circle behind cross -->
+      <circle r="68" fill="url(#bgGrad)" stroke="#34d399" stroke-width="4" />
+      <!-- Medical Cross -->
+      <rect x="-14" y="-42" width="28" height="84" rx="6" fill="#ffffff" />
+      <rect x="-42" y="-14" width="84" height="28" rx="6" fill="#ffffff" />
+    </g>
+
+    <!-- Vault Dial & Hinges -->
+    <circle cx="340" cy="260" r="14" fill="url(#goldGrad)" />
+    <circle cx="340" cy="260" r="6" fill="#78350f" />
+    <rect x="100" y="180" width="8" height="24" rx="4" fill="#64748b" />
+    <rect x="100" y="316" width="8" height="24" rx="4" fill="#64748b" />
+
+    <!-- Currency / Coins Symbol Floating -->
+    <circle cx="160" cy="110" r="30" fill="url(#goldGrad)" stroke="#d97706" stroke-width="3" />
+    <text x="160" y="120" font-size="28" font-family="Arial, sans-serif" font-weight="bold" fill="#78350f" text-anchor="middle">ج.م</text>
+
+    <circle cx="352" cy="100" r="24" fill="url(#goldGrad)" stroke="#d97706" stroke-width="3" />
+    <text x="352" y="108" font-size="22" font-family="Arial, sans-serif" font-weight="bold" fill="#78350f" text-anchor="middle">✓</text>
+  </g>
+
+  <!-- Bottom App Name Label -->
+  <text x="256" y="445" font-size="34" font-family="'Cairo', sans-serif" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1">خزانة الصيدلية</text>
+</svg>
