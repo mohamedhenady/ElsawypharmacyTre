@@ -5,7 +5,67 @@
     font-family: 'JetBrains Mono', monospace;
     font-feature-settings: "tnum";
     font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
   }
+
+  .font-display {
+    font-family: 'Cairo', sans-serif;
+    letter-spacing: -0.015em;
+  }
+
+  .font-body {
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+  }
+
+  /* Apothecary Ledger Paper & Crisp Border Utilities */
+  .ledger-sheet {
+    background-color: #ffffff;
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  }
+
+  .ledger-double-border {
+    border-bottom: 3px double #94a3b8;
+  }
+
+  .ledger-row {
+    transition: background-color 0.15s ease-in-out;
+  }
+
+  .ledger-row:hover {
+    background-color: rgba(241, 245, 249, 0.7);
+  }
+
+  .seal-glow-emerald {
+    box-shadow: 0 0 25px -5px rgba(5, 150, 105, 0.25);
+  }
+
+  .seal-glow-amber {
+    box-shadow: 0 0 25px -5px rgba(217, 119, 6, 0.25);
+  }
+
+  .seal-glow-rose {
+    box-shadow: 0 0 25px -5px rgba(225, 29, 72, 0.25);
+  }
+}
+
+/* Custom crisp scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 @media print {

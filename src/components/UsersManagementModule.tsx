@@ -455,18 +455,6 @@ export const UsersManagementModule: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    {!isCurrent && (
-                      <button
-                        id={`btn-switch-user-${user.id}`}
-                        onClick={() => setCurrentUser(user)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                        title="التبديل إلى هذا الحساب"
-                      >
-                        <ArrowRightLeft className="w-3.5 h-3.5" />
-                        <span>تبديل</span>
-                      </button>
-                    )}
-
                     {isManager && (
                       <>
                         <button
@@ -571,7 +559,7 @@ export const UsersManagementModule: React.FC = () => {
             {!isManager && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2">
                 <Info className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>أنت تستعرض هذه الشاشة كـ ({currentUser.name}). لتعديل الصلاحيات يرجى التبديل لحساب المدير العام.</span>
+                <span>أنت تستعرض هذه الشاشة كـ ({currentUser.name}). لتعديل الصلاحيات يرجى تسجيل الدخول بحساب المدير العام.</span>
               </div>
             )}
 

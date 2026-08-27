@@ -27,7 +27,10 @@ import {
   ShieldCheck,
   Calculator,
   Stethoscope,
-  UserCog
+  UserCog,
+  User,
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 import { UserPermissions } from '../types';
 
@@ -56,8 +59,8 @@ interface SidebarProps {
   onOpenQuickEntry: () => void;
   onOpenSettings: () => void;
   onOpenPrintReport: () => void;
+  onOpenWhatsAppSummary?: () => void;
   onOpenInstallModal?: () => void;
-  onOpenSwitchUser?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -70,8 +73,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenQuickEntry,
   onOpenSettings,
   onOpenPrintReport,
-  onOpenInstallModal,
-  onOpenSwitchUser
+  onOpenWhatsAppSummary,
+  onOpenInstallModal
 }) => {
   const {
     pharmacyProfile,
@@ -88,6 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     customerDebts,
     employeeAdvances,
     currentUser,
+    logout,
     hasPermission
   } = useTreasury();
 
@@ -186,8 +190,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ]
     },
     {
-      groupTitle: 'التقارير والإدارة',
+      groupTitle: 'الحساب والإدارة',
       items: [
+        {
+          id: 'profile',
+          permKey: 'profile' as keyof UserPermissions,
+          label: 'الملف الشخصي والحساب',
+          shortLabel: 'البروفايل',
+          icon: User
+        },
         {
           id: 'report',
           permKey: 'report' as keyof UserPermissions,
@@ -298,13 +309,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* Active User Account Switcher Card */}
+      {/* Active User Account Card */}
       <div className={`border-b border-slate-800/80 bg-slate-950/60 ${isCollapsed ? 'p-2' : 'p-3'}`}>
         {!isCollapsed ? (
           <div
-            onClick={onOpenSwitchUser}
+            onClick={() => {
+              setActiveTab('profile');
+              setIsMobileOpen(false);
+            }}
             className="flex items-center justify-between p-2 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer group"
-            title="انقر لتبديل حساب المستخدم"
+            title="الملف الشخصي"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center text-xs shrink-0 border ${
@@ -326,16 +340,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               </div>
             </div>
-
-            <span className="p-1.5 rounded-lg bg-slate-800 text-slate-400 group-hover:text-white transition-colors shrink-0">
-              <ArrowRightLeft className="w-3.5 h-3.5" />
-            </span>
           </div>
         ) : (
           <div
-            onClick={onOpenSwitchUser}
+            onClick={() => {
+              setActiveTab('profile');
+              setIsMobileOpen(false);
+            }}
             className="flex justify-center cursor-pointer p-1 rounded-lg hover:bg-slate-800 transition-colors"
-            title={`المستخدم: ${currentUser.name} (${userBadge.title}) - انقر للتبديل`}
+            title={`المستخدم: ${currentUser.name} (${userBadge.title})`}
           >
             <span className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center text-xs border ${
               currentUser.role === 'manager'
@@ -460,6 +473,58 @@ export const Sidebar: React.FC<SidebarProps> = ({
             })}
           </div>
         ))}
+
+        {/* Logout Quick Button */}
+        <div className="pt-2 border-t border-slate-800/80">
+          <button
+            id="sidebar-btn-logout"
+            onClick={() => {
+              logout();
+              setIsMobileOpen(false);
+            }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-rose-950/30 hover:bg-rose-900/50 text-rose-300 border border-rose-800/40 transition-all cursor-pointer ${
+              isCollapsed ? 'justify-center px-2' : 'justify-between'
+            }`}
+            title="تسجيل الخروج من النظام"
+          >
+            <div className="flex items-center gap-2">
+              <LogOut className="w-4 h-4 text-rose-400 shrink-0" />
+              {!isCollapsed && <span>تسجيل الخروج</span>}
+            </div>
+            {!isCollapsed && (
+              <span className="text-[10px] bg-rose-900/60 text-rose-200 px-1.5 py-0.5 rounded border border-rose-700/50">
+                خروج
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* WhatsApp Summary Trigger */}
+        {onOpenWhatsAppSummary && (
+          <div className="pt-2 border-t border-slate-800/80">
+            <button
+              id="sidebar-btn-whatsapp-summary"
+              onClick={() => {
+                onOpenWhatsAppSummary();
+                setIsMobileOpen(false);
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-800/40 transition-all cursor-pointer ${
+                isCollapsed ? 'justify-center px-2' : 'justify-between'
+              }`}
+              title="إرسال ملخص الخزانة لواتساب الإدارة"
+            >
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                {!isCollapsed && <span>إشعار واتساب للإدارة</span>}
+              </div>
+              {!isCollapsed && (
+                <span className="text-[10px] bg-emerald-900/60 text-emerald-200 px-1.5 py-0.5 rounded border border-emerald-700/50">
+                  واتساب 💬
+                </span>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* PWA Mobile Install Quick Button */}
         {onOpenInstallModal && (

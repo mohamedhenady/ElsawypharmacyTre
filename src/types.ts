@@ -6,6 +6,7 @@ export interface PharmacyProfile {
   slogan: string;
   logoUrl: string;
   phone: string;
+  managerWhatsApp?: string;
   address: string;
   taxNumber?: string;
   commercialRecord?: string;
@@ -215,6 +216,7 @@ export interface UserPermissions {
   customers: boolean; // ديون وحسابات العملاء
   employees: boolean; // سلف وحسابات الموظفين
   report: boolean; // تقرير التسوية الشهري والطباعة
+  profile: boolean; // الصفحة الشخصية للمستخدم وتعديل بياناته
   settings: boolean; // إعدادات وبيانات الصيدلية
   users: boolean; // إدارة المستخدمين وتحديد الصلاحيات (المدير فقط)
   quickEntry: boolean; // إضافة حركة سريعة

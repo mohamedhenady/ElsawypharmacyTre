@@ -1,10 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTreasury } from '../context/TreasuryContext';
 import { formatCurrency, formatNumber, formatDateArabic } from '../utils/formatters';
-import { FileText, CheckCircle2, AlertTriangle, Building, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { FileText, CheckCircle2, AlertTriangle, Building, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight, MessageSquare } from 'lucide-react';
 import { PreparePrintButton } from './PreparePrintButton';
+import { WhatsAppSummaryModal } from './WhatsAppSummaryModal';
 
-export const ReportModule: React.FC = () => {
+interface ReportModuleProps {
+  onOpenWhatsAppSummary?: () => void;
+}
+
+export const ReportModule: React.FC<ReportModuleProps> = ({ onOpenWhatsAppSummary }) => {
+  const [isLocalWhatsAppOpen, setIsLocalWhatsAppOpen] = useState(false);
   const {
     pharmacyProfile,
     currentPeriod,
@@ -44,18 +50,37 @@ export const ReportModule: React.FC = () => {
           </p>
         </div>
 
-        <PreparePrintButton
-          label="تجهيز للطباعة / حفظ PDF"
-          title="التقرير المالي والميزان الختامي للشهر"
-          subtitle={`الفترة المحاسبية: ${currentPeriod.name}`}
-          summaryStats={[
-            { label: 'إجمالي دخل الشفتات', value: formatCurrency(summary.totalIncome, pharmacyProfile.currency) },
-            { label: 'إجمالي مسددات الشركات', value: formatCurrency(summary.totalSuppliers, pharmacyProfile.currency) },
-            { label: 'إجمالي المصروفات', value: formatCurrency(summary.totalExpenses, pharmacyProfile.currency) },
-            { label: 'الرصيد المحاسبي المتبقي', value: formatCurrency(summary.theoreticalEndingBalance, pharmacyProfile.currency) }
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenWhatsAppSummary) onOpenWhatsAppSummary();
+              else setIsLocalWhatsAppOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>إرسال لواتساب الإدارة</span>
+          </button>
+
+          <PreparePrintButton
+            label="تجهيز للطباعة / حفظ PDF"
+            title="التقرير المالي والميزان الختامي للشهر"
+            subtitle={`الفترة المحاسبية: ${currentPeriod.name}`}
+            summaryStats={[
+              { label: 'إجمالي دخل الشفتات', value: formatCurrency(summary.totalIncome, pharmacyProfile.currency) },
+              { label: 'إجمالي مسددات الشركات', value: formatCurrency(summary.totalSuppliers, pharmacyProfile.currency) },
+              { label: 'إجمالي المصروفات', value: formatCurrency(summary.totalExpenses, pharmacyProfile.currency) },
+              { label: 'الرصيد المحاسبي المتبقي', value: formatCurrency(summary.theoreticalEndingBalance, pharmacyProfile.currency) }
+            ]}
+          />
+        </div>
       </div>
+
+      <WhatsAppSummaryModal
+        isOpen={isLocalWhatsAppOpen}
+        onClose={() => setIsLocalWhatsAppOpen(false)}
+      />
 
       {/* PRINTABLE REPORT CONTAINER */}
       <div className="printable-report bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-xs space-y-8 print:border-none print:shadow-none print:p-0">

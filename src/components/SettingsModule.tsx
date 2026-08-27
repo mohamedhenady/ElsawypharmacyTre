@@ -48,9 +48,10 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
   const [logoUrl, setLogoUrl] = useState(pharmacyProfile.logoUrl || '');
   const [currency, setCurrency] = useState(pharmacyProfile.currency);
   const [phone, setPhone] = useState(pharmacyProfile.phone || '');
+  const [managerWhatsApp, setManagerWhatsApp] = useState(pharmacyProfile.managerWhatsApp || pharmacyProfile.phone || '');
   const [address, setAddress] = useState(pharmacyProfile.address || '');
   const [taxNumber, setTaxNumber] = useState(pharmacyProfile.taxNumber || '');
-  const [commercialReg, setCommercialReg] = useState(pharmacyProfile.commercialRegistration || '');
+  const [commercialReg, setCommercialReg] = useState(pharmacyProfile.commercialRecord || '');
   const [managerName, setManagerName] = useState(pharmacyProfile.managerName || '');
 
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -76,9 +77,10 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
       logoUrl: logoUrl.trim(),
       currency: currency.trim() || 'ج.م',
       phone: phone.trim(),
+      managerWhatsApp: managerWhatsApp.trim(),
       address: address.trim(),
       taxNumber: taxNumber.trim(),
-      commercialRegistration: commercialReg.trim(),
+      commercialRecord: commercialReg.trim(),
       managerName: managerName.trim()
     });
 
@@ -296,7 +298,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                أرقام الهاتف / الخط الساخن والواتساب:
+                أرقام الهاتف / الخط الساخن:
               </label>
               <input
                 type="text"
@@ -304,6 +306,20 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="01012345678 - 0223456789"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-600 focus:outline-none text-sm bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>رقم واتساب الإدارة (للإشعارات الفورية):</span>
+                <span className="text-[10px] text-emerald-700 font-normal">WhatsApp 💬</span>
+              </label>
+              <input
+                type="tel"
+                value={managerWhatsApp}
+                onChange={(e) => setManagerWhatsApp(e.target.value)}
+                placeholder="010XXXXXXXX"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-600 focus:outline-none text-sm font-mono font-bold bg-white"
               />
             </div>
 

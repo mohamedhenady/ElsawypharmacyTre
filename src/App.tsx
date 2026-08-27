@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { TreasuryProvider, useTreasury } from './context/TreasuryContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
+import { LoginScreen } from './components/LoginScreen';
+import { ProfileModule } from './components/ProfileModule';
 import { Dashboard } from './components/Dashboard';
 import { IncomeModule } from './components/IncomeModule';
 import { SuppliersModule } from './components/SuppliersModule';
@@ -14,16 +16,17 @@ import { SettingsModule } from './components/SettingsModule';
 import { ReportModule } from './components/ReportModule';
 import { UsersManagementModule } from './components/UsersManagementModule';
 import { QuickEntryModal } from './components/QuickEntryModal';
-import { SwitchUserModal } from './components/SwitchUserModal';
+import { WhatsAppSummaryModal } from './components/WhatsAppSummaryModal';
+import { OfflineSyncBanner } from './components/OfflineSyncBanner';
 import { usePWAInstall, PWAInstallModal } from './components/PWAInstallModal';
 import { Smartphone, Download, X, ShieldAlert } from 'lucide-react';
 import { UserPermissions } from './types';
 
 export const MainApp: React.FC = () => {
-  const { currentUser, currentUserPermissions, hasPermission } = useTreasury();
+  const { currentUser, currentUserPermissions, hasPermission, isAuthenticated, logout } = useTreasury();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState<boolean>(false);
-  const [isSwitchUserOpen, setIsSwitchUserOpen] = useState<boolean>(false);
+  const [isWhatsAppSummaryOpen, setIsWhatsAppSummaryOpen] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [dismissedMobileBanner, setDismissedMobileBanner] = useState<boolean>(() => {
     try {
@@ -58,12 +61,18 @@ export const MainApp: React.FC = () => {
         'personal',
         'employees',
         'report',
+        'profile',
         'settings'
       ];
       const fallback = candidateTabs.find(tab => hasPermission(tab)) || 'dashboard';
       setActiveTab(fallback);
     }
   }, [currentUser.id, currentUserPermissions, activeTab, hasPermission]);
+
+  // If not authenticated, do not show any data and display the login screen interface
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
 
   const handleToggleSidebarCollapse = (collapsed: boolean) => {
     setIsSidebarCollapsed(collapsed);
@@ -99,13 +108,16 @@ export const MainApp: React.FC = () => {
         onOpenQuickEntry={() => setIsQuickEntryOpen(true)}
         onOpenSettings={() => setActiveTab('settings')}
         onOpenPrintReport={() => setActiveTab('report')}
+        onOpenWhatsAppSummary={() => setIsWhatsAppSummaryOpen(true)}
         onOpenInstallModal={() => pwa.openInstallGuide()}
-        onOpenSwitchUser={() => setIsSwitchUserOpen(true)}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         
+        {/* Offline Awareness & Sync Banner */}
+        <OfflineSyncBanner onOpenInstallModal={() => pwa.openInstallGuide()} />
+
         {/* Smart Mobile PWA Banner */}
         {!pwa.isStandalone && !dismissedMobileBanner && (
           <div
@@ -149,8 +161,8 @@ export const MainApp: React.FC = () => {
           onOpenQuickEntry={() => setIsQuickEntryOpen(true)}
           onOpenSettings={() => setActiveTab('settings')}
           onOpenPrintReport={() => setActiveTab('report')}
+          onOpenWhatsAppSummary={() => setIsWhatsAppSummaryOpen(true)}
           onOpenInstallModal={() => pwa.openInstallGuide()}
-          onOpenSwitchUser={() => setIsSwitchUserOpen(true)}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -165,14 +177,22 @@ export const MainApp: React.FC = () => {
               </div>
               <h2 className="text-lg font-bold text-slate-800 mb-1">غير مصرح بالوصول</h2>
               <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                حسابك الحالي ({currentUser.name} - {currentUser.role}) لا يمتلك صلاحية الدخول لهذه الشاشة. يرجى التبديل لحساب يمتلك الصلاحية أو مراجعة المدير.
+                حسابك الحالي ({currentUser.name} - {currentUser.role}) لا يمتلك صلاحية الدخول لهذه الشاشة. يرجى تسجيل الدخول بحساب يمتلك الصلاحية أو مراجعة المدير.
               </p>
-              <button
-                onClick={() => setIsSwitchUserOpen(true)}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors cursor-pointer"
-              >
-                تبديل المستخدم
-              </button>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition-colors cursor-pointer"
+                >
+                  العودة للرئيسية
+                </button>
+                <button
+                  onClick={logout}
+                  className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition-colors cursor-pointer"
+                >
+                  تسجيل الخروج
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -181,6 +201,7 @@ export const MainApp: React.FC = () => {
                   setActiveTab={setActiveTab}
                   onOpenQuickEntry={() => setIsQuickEntryOpen(true)}
                   onOpenPrintReport={() => setActiveTab('report')}
+                  onOpenWhatsAppSummary={() => setIsWhatsAppSummaryOpen(true)}
                 />
               )}
 
@@ -198,7 +219,13 @@ export const MainApp: React.FC = () => {
 
               {activeTab === 'employees' && <EmployeeAdvancesModule />}
 
-              {activeTab === 'report' && <ReportModule />}
+              {activeTab === 'report' && (
+                <ReportModule onOpenWhatsAppSummary={() => setIsWhatsAppSummaryOpen(true)} />
+              )}
+
+              {activeTab === 'profile' && (
+                <ProfileModule />
+              )}
 
               {activeTab === 'users' && <UsersManagementModule />}
 
@@ -228,10 +255,10 @@ export const MainApp: React.FC = () => {
           onClose={() => setIsQuickEntryOpen(false)}
         />
 
-        {/* Switch User Modal */}
-        <SwitchUserModal
-          isOpen={isSwitchUserOpen}
-          onClose={() => setIsSwitchUserOpen(false)}
+        {/* WhatsApp Summary Modal */}
+        <WhatsAppSummaryModal
+          isOpen={isWhatsAppSummaryOpen}
+          onClose={() => setIsWhatsAppSummaryOpen(false)}
         />
 
         {/* PWA Mobile Install Modal */}

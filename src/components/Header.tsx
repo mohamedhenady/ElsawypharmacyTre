@@ -25,16 +25,21 @@ import {
   ShieldCheck,
   Calculator,
   Stethoscope,
-  ArrowRightLeft
+  ArrowRightLeft,
+  User,
+  LogOut,
+  MessageSquare,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 
 interface HeaderProps {
   onOpenQuickEntry: () => void;
   onOpenSettings: () => void;
   onOpenPrintReport: () => void;
+  onOpenWhatsAppSummary?: () => void;
   onToggleMobileSidebar: () => void;
   onOpenInstallModal?: () => void;
-  onOpenSwitchUser?: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
@@ -43,9 +48,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenQuickEntry,
   onOpenSettings,
   onOpenPrintReport,
+  onOpenWhatsAppSummary,
   onToggleMobileSidebar,
   onOpenInstallModal,
-  onOpenSwitchUser,
   activeTab,
   setActiveTab
 }) => {
@@ -57,6 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
     currentPeriod,
     summary,
     currentUser,
+    logout,
     hasPermission
   } = useTreasury();
 
@@ -80,6 +86,8 @@ export const Header: React.FC<HeaderProps> = ({
         return { label: 'سلف وحسابات الموظفين', icon: Briefcase };
       case 'report':
         return { label: 'تقرير التسوية الشهري', icon: FileSpreadsheet };
+      case 'profile':
+        return { label: 'الملف الشخصي والحساب', icon: User };
       case 'users':
         return { label: 'إدارة المستخدمين والصلاحيات', icon: Users };
       case 'settings':
@@ -150,24 +158,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Center / Actions section: User Selector, Period & Status */}
+          {/* Center / Actions section: Period & Status */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            
-            {/* Active User Switcher Pill */}
-            {onOpenSwitchUser && (
-              <button
-                id="btn-header-switch-user"
-                onClick={onOpenSwitchUser}
-                className={`inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs ${roleBadge.cls}`}
-                title="اضغط لتبديل حساب المستخدم النشط"
-              >
-                {roleBadge.icon}
-                <span className="hidden sm:inline font-bold">{currentUser.name}</span>
-                <span className="text-[10px] opacity-80">({roleBadge.title})</span>
-                <ArrowRightLeft className="w-3 h-3 opacity-60 ml-0.5" />
-              </button>
-            )}
-
             {/* Period Selector Dropdown */}
             <div className="hidden sm:flex items-center gap-1 bg-slate-100/90 rounded-xl px-2 py-1 border border-slate-200">
               <Calendar className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
@@ -199,41 +191,56 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {hasPermission('report') && (
+            {/* WhatsApp Summary Quick Button */}
+            {onOpenWhatsAppSummary && (
               <button
-                id="btn-print-report"
-                onClick={onOpenPrintReport}
-                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors cursor-pointer"
-                title="عرض وطباعة التقرير المالي الشهري"
+                id="btn-header-whatsapp"
+                onClick={onOpenWhatsAppSummary}
+                className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 transition-colors cursor-pointer"
+                title="إرسال ملخص مالي يومي لواتساب الإدارة"
               >
-                <Printer className="w-3.5 h-3.5 text-slate-600" />
-                <span>التقرير</span>
+                <MessageSquare className="w-4 h-4" />
               </button>
             )}
 
-            {/* PWA Install Button */}
-            {onOpenInstallModal && (
-              <button
-                id="btn-header-install-mobile"
-                onClick={onOpenInstallModal}
-                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-semibold transition-colors cursor-pointer"
-                title="تثبيت التطبيق على الموبايل"
-              >
-                <Smartphone className="w-3.5 h-3.5 text-emerald-700" />
-                <span className="hidden xl:inline">تثبيت PWA</span>
-              </button>
-            )}
+            {/* Profile Tab Quick Button */}
+            <button
+              id="btn-header-profile"
+              onClick={() => setActiveTab('profile')}
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                activeTab === 'profile'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+              }`}
+              title="الملف الشخصي والحساب"
+            >
+              <User className="w-4 h-4" />
+            </button>
 
             {hasPermission('settings') && (
               <button
                 id="btn-settings"
                 onClick={onOpenSettings}
-                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
+                className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                  activeTab === 'settings'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                }`}
                 title="إعدادات بيانات الصيدلية والتصنيفات"
               >
-                <SettingsIcon className="w-4 h-4 text-slate-600" />
+                <SettingsIcon className="w-4 h-4" />
               </button>
             )}
+
+            {/* Logout Quick Button */}
+            <button
+              id="btn-header-logout"
+              onClick={logout}
+              className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+              title="تسجيل الخروج وقفل الجلسة"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
 
         </div>

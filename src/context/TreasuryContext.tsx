@@ -51,6 +51,7 @@ export const computeUserPermissions = (user: AppUser): UserPermissions => {
       customers: true,
       employees: true,
       report: true,
+      profile: true,
       settings: true,
       users: true,
       quickEntry: true,
@@ -71,6 +72,7 @@ export const computeUserPermissions = (user: AppUser): UserPermissions => {
       customers: false,
       employees: false,
       report: false,
+      profile: true,
       settings: false,
       users: false,
       quickEntry: true, // allows quick entry for suppliers & expenses
@@ -91,6 +93,7 @@ export const computeUserPermissions = (user: AppUser): UserPermissions => {
     customers: custom.customers !== undefined ? !!custom.customers : true,
     employees: !!custom.employees,
     report: !!custom.report,
+    profile: true,
     settings: !!custom.settings,
     users: false, // إدارة المستخدمين محصورة في المدير
     quickEntry: custom.quickEntry !== undefined ? !!custom.quickEntry : true,
@@ -189,9 +192,11 @@ interface TreasuryContextType {
   users: AppUser[];
   currentUser: AppUser;
   currentUserPermissions: UserPermissions;
+  isAuthenticated: boolean;
   setCurrentUser: (user: AppUser) => void;
   login: (identifier: string, pin?: string) => { success: boolean; error?: string };
   logout: () => void;
+  lockSession: () => void;
   addUser: (user: Omit<AppUser, 'id' | 'createdAt'>) => void;
   updateUser: (id: string, updates: Partial<AppUser>) => void;
   deleteUser: (id: string) => void;
@@ -359,6 +364,15 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return saved || 'user-manager';
     } catch {
       return 'user-manager';
+    }
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      const sessionAuth = sessionStorage.getItem('PHARMACY_SESSION_AUTHENTICATED');
+      return sessionAuth === 'true';
+    } catch {
+      return false;
     }
   });
 
@@ -995,6 +1009,12 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // User Management & Authentication
   const setCurrentUser = (user: AppUser) => {
     setCurrentUserId(user.id);
+    setIsAuthenticated(true);
+    try {
+      sessionStorage.setItem('PHARMACY_SESSION_AUTHENTICATED', 'true');
+    } catch {
+      // ignore
+    }
     addAuditLog('settings_update', 'تبديل المستخدم', `تم تسجيل الدخول بحساب: ${user.name} (${user.role})`);
   };
 
@@ -1009,11 +1029,18 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return { success: false, error: 'المستخدم غير موجود' };
     }
 
-    if (pin && user.pin && user.pin !== pin) {
+    if (user.pin && user.pin !== pin) {
       return { success: false, error: 'رمز PIN غير صحيح' };
     }
 
     setCurrentUserId(user.id);
+    setIsAuthenticated(true);
+    try {
+      sessionStorage.setItem('PHARMACY_SESSION_AUTHENTICATED', 'true');
+    } catch {
+      // ignore
+    }
+
     // update lastActive
     setUsers(prev => prev.map(u => u.id === user.id ? { ...u, lastActive: new Date().toISOString() } : u));
     addAuditLog('settings_update', 'تسجيل دخول', `تسجيل دخول ناجح: ${user.name}`);
@@ -1021,10 +1048,21 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const logout = () => {
-    // switch to first manager or keep manager fallback
-    const manager = users.find(u => u.role === 'manager') || users[0];
-    if (manager) {
-      setCurrentUserId(manager.id);
+    setIsAuthenticated(false);
+    try {
+      sessionStorage.removeItem('PHARMACY_SESSION_AUTHENTICATED');
+    } catch {
+      // ignore
+    }
+    addAuditLog('settings_update', 'تسجيل خروج', `تسجيل خروج المستخدم: ${currentUser.name}`);
+  };
+
+  const lockSession = () => {
+    setIsAuthenticated(false);
+    try {
+      sessionStorage.removeItem('PHARMACY_SESSION_AUTHENTICATED');
+    } catch {
+      // ignore
     }
   };
 
@@ -1193,9 +1231,11 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         users,
         currentUser,
         currentUserPermissions,
+        isAuthenticated,
         setCurrentUser,
         login,
         logout,
+        lockSession,
         addUser,
         updateUser,
         deleteUser,

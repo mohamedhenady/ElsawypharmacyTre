@@ -22,6 +22,7 @@ export const initialPharmacyProfile: PharmacyProfile = {
   "slogan": "تقرير خزانة وحسابات شهر أغسطس 2026",
   "logoUrl": "",
   "phone": "01012345678",
+  "managerWhatsApp": "01012345678",
   "address": "شارع الجمهورية - أمام المستشفى العام",
   "taxNumber": "482-910-332",
   "commercialRecord": "84920",

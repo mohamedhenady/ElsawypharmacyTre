@@ -10,7 +10,8 @@ import {
   Users,
   Briefcase,
   FileSpreadsheet,
-  Settings
+  Settings,
+  User
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -91,6 +92,11 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab 
       id: 'report',
       label: 'تقرير التسوية الشهري',
       icon: FileSpreadsheet
+    },
+    {
+      id: 'profile',
+      label: 'الملف الشخصي',
+      icon: User
     },
     {
       id: 'settings',
