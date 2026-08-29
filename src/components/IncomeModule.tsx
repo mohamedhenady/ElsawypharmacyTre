@@ -13,12 +13,15 @@ import {
   Clock,
   User,
   Search,
-  Filter
+  Filter,
+  FileSpreadsheet
 } from 'lucide-react';
 import { PreparePrintButton } from './PreparePrintButton';
 import { PrintHeader, PrintSignatures } from './PrintHeader';
+import { ExcelExportModal } from './ExcelExportModal';
 
 export const IncomeModule: React.FC = () => {
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const {
     pharmacyProfile,
     currentPeriod,
@@ -147,6 +150,16 @@ export const IncomeModule: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsExcelModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold transition-colors cursor-pointer"
+            title="تصدير بيانات الدخل والورديات إكسيل"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+            <span className="hidden sm:inline">تصدير Excel</span>
+          </button>
+
           <PreparePrintButton
             label="تجهيز للطباعة"
             title="تقرير تسليمات وإيرادات الشفتات"
@@ -460,6 +473,13 @@ export const IncomeModule: React.FC = () => {
 
       {/* Official Print Signatures */}
       <PrintSignatures />
+
+      {/* Excel Customization Modal */}
+      <ExcelExportModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        defaultSheetKey="income"
+      />
 
     </div>
   );

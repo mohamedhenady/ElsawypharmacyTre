@@ -29,7 +29,8 @@ import {
   CreditCard,
   FileText,
   Zap,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Vault
 } from 'lucide-react';
 
 const PERMISSION_CONFIG: {
@@ -39,6 +40,13 @@ const PERMISSION_CONFIG: {
   icon: React.ReactNode;
   category: 'core' | 'finance' | 'ledger' | 'reports';
 }[] = [
+  {
+    key: 'drawer',
+    label: 'قسم إقفال درج النقدية والورديات',
+    desc: 'تسجيل منصرفات الدرج النقدية، تحويلات إنستاباي، وإقفال الوردية وتسليم العهدة (الافتراضي للصيادلة)',
+    icon: <Vault className="w-4 h-4 text-emerald-600" />,
+    category: 'core'
+  },
   {
     key: 'dashboard',
     label: 'لوحة الخزانة والتسوية',
@@ -219,12 +227,33 @@ export const UsersManagementModule: React.FC = () => {
     });
   };
 
-  const handleSetPresetPharmacist = (presetType: 'shift' | 'full' | 'minimal') => {
+  const handleSetPresetPharmacist = (presetType: 'drawer_only' | 'shift' | 'full') => {
     if (!currentPharmacist) return;
-    if (presetType === 'shift') {
-      // قياسي: وردية صيدلية (الدخل + العملاء + حركة سريعة)
+    if (presetType === 'drawer_only') {
+      // الافتراضي: إقفال الدرج فقط (Default)
       updatePharmacistPermissions(currentPharmacist.id, {
         dashboard: false,
+        drawer: true,
+        income: false,
+        suppliers: false,
+        expenses: false,
+        wallet: false,
+        personal: false,
+        customers: false,
+        employees: false,
+        report: false,
+        settings: false,
+        users: false,
+        quickEntry: false,
+        closePeriod: false,
+        deleteRecords: false,
+        backup: false
+      });
+    } else if (presetType === 'shift') {
+      // قياسي: وردية صيدلية موسعة (الدرج + الدخل + العملاء + حركة سريعة)
+      updatePharmacistPermissions(currentPharmacist.id, {
+        dashboard: false,
+        drawer: true,
         income: true,
         suppliers: false,
         expenses: false,
@@ -237,12 +266,14 @@ export const UsersManagementModule: React.FC = () => {
         users: false,
         quickEntry: true,
         closePeriod: false,
-        deleteRecords: false
+        deleteRecords: false,
+        backup: false
       });
     } else if (presetType === 'full') {
-      // صيدلي مسؤول رئيسي
+      // صيدلي مسؤول رئيسي (مثل د. جهاد)
       updatePharmacistPermissions(currentPharmacist.id, {
         dashboard: true,
+        drawer: true,
         income: true,
         suppliers: true,
         expenses: true,
@@ -255,25 +286,8 @@ export const UsersManagementModule: React.FC = () => {
         users: false,
         quickEntry: true,
         closePeriod: false,
-        deleteRecords: false
-      });
-    } else if (presetType === 'minimal') {
-      // حركة سريعة فقط
-      updatePharmacistPermissions(currentPharmacist.id, {
-        dashboard: false,
-        income: true,
-        suppliers: false,
-        expenses: false,
-        wallet: false,
-        personal: false,
-        customers: false,
-        employees: false,
-        report: false,
-        settings: false,
-        users: false,
-        quickEntry: true,
-        closePeriod: false,
-        deleteRecords: false
+        deleteRecords: true,
+        backup: false
       });
     }
   };
@@ -374,7 +388,7 @@ export const UsersManagementModule: React.FC = () => {
             <h2 className="text-base font-bold text-slate-800">المستخدمون المسجلون بالنظام ({users.length})</h2>
           </div>
           <span className="text-xs text-slate-500">
-            اضغط على زر التبديل لتسجيل الدخول الفوري بأي حساب
+            قائمة المستخدمين والصلاحيات المعتمدة لكل حساب
           </span>
         </div>
 
@@ -535,22 +549,22 @@ export const UsersManagementModule: React.FC = () => {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
+                    onClick={() => handleSetPresetPharmacist('drawer_only')}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  >
+                    🔒 الافتراضي (إقفال الدرج فقط)
+                  </button>
+                  <button
                     onClick={() => handleSetPresetPharmacist('shift')}
                     className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
                   >
-                    نموذج وردية قياسي (الدخل + العملاء + حركة سريعة)
+                    نموذج وردية موسع (الدرج + الدخل + العملاء)
                   </button>
                   <button
                     onClick={() => handleSetPresetPharmacist('full')}
                     className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
                   >
-                    صيدلي رئيسي (شامل)
-                  </button>
-                  <button
-                    onClick={() => handleSetPresetPharmacist('minimal')}
-                    className="px-3 py-1.5 bg-white border border-purple-300 hover:bg-purple-100 text-purple-900 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    إدخال دخل وحركة سريعة فقط
+                    صيدلي رئيسي وإدارة (د. جهاد)
                   </button>
                 </div>
               </div>

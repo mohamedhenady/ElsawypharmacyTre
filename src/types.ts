@@ -89,8 +89,8 @@ export interface WalletTransaction {
   method: 'instapay' | 'wallet' | 'vodafone_cash' | 'orange_cash' | 'etisalat_cash' | 'bank_transfer';
   inAmount: number;
   outAmount: number;
-  tag: string; // e.g., 'د. حبيب', 'مصباح', 'محول لنقدي', 'سداد مورد', 'عام'
-  notes?: string;
+  tag?: string; // الملاحظات والوسم - اختياري ويمكن أن يترك فارغاً
+  notes?: string; // الملاحظات والبيان - اختياري
   createdAt: string;
 }
 
@@ -167,6 +167,90 @@ export interface AuditLog {
   amount?: number;
 }
 
+// Cash Drawer Shift & Expenses Management
+export type DrawerExpenseCategory = 
+  | 'supplier' // سداد شركات وموردين
+  | 'expense' // مصاريف وتشغيل ونثريات
+  | 'employee_advance' // سلف ومسحوبات موظفين
+  | 'customer_debt' // دين عميل / آجل
+  | 'wallet_instapay' // نقود غير ممسوكة باليد (محافظ / انستاباي)
+  | 'partner_withdrawal' // مسحوبات شركاء ومسؤول
+  | 'general'; // نثريات ومصروفات أخرى عامة
+
+export interface DrawerExpenseItem {
+  id: string;
+  shiftId: string;
+  title: string;
+  amount: number;
+  category: DrawerExpenseCategory;
+  targetEntityId?: string; // supplierId, categoryId, employeeId, customerId, partyId
+  paymentMethod?: 'cash' | 'wallet' | 'instapay';
+  notes?: string;
+  createdAt: string;
+}
+
+export interface InstaPayTransfer {
+  id: string;
+  shiftId: string;
+  amount: number;
+  sender?: string; // اسم الراسل أو ملاحظة
+  method?: 'instapay';
+  time?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface WalletTransfer {
+  id: string;
+  shiftId: string;
+  amount: number;
+  sender?: string; // اسم الراسل أو ملاحظة
+  time?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface DrawerShift {
+  id: string;
+  periodId: string;
+  date: string; // YYYY-MM-DD
+  time?: string;
+  dayName?: string; // السبت، الأحد...
+  pharmacistName: string;
+  pharmacistId?: string;
+  shiftType: ShiftType; // 'morning' | 'evening' | 'night' | 'other'
+  openingBalance: number; // رصيد الدرج الافتتاحي (رقم مرجعي لاستلام العهدة فقط - لا يدخل في العمليات الحسابية)
+  status: 'open' | 'closed';
+  openedAt: string;
+  closedAt?: string;
+  
+  // Expenses recorded in the drawer during this shift (صدقة، مسحوبات، مصروفات، موردين)
+  expenses: DrawerExpenseItem[];
+  totalExpenses: number; // إجمالي المصروفات النقدية
+  
+  // InstaPay transfers (تحويلات إنستاباي بالوردية)
+  instaPayTransfers?: InstaPayTransfer[];
+  totalInstaPay?: number; // إجمالي تحويلات إنستاباي
+
+  // Digital Wallets transfers (تحويلات المحفظة الإلكترونية بالوردية - فودافون كاش / المحافظ)
+  walletTransfers?: WalletTransfer[];
+  totalWallet?: number; // إجمالي تحويلات المحفظة الإلكترونية
+  
+  // Shift Sales / Income (إجمالي مبيعات الشفت = المصروفات + انستا + المحفظة + المتروك + المحول للخزينة)
+  totalSales?: number;
+  
+  // Closing values
+  leftInDrawer: number; // المبلغ المتروك في الدرج (رصيد الوردية القادمة)
+  transferredToVault: number; // مبلغ النقدية المحول للخزينة نقدي باليد
+  notes?: string;
+  
+  // Manager Review & Distribution state
+  isApprovedByManager?: boolean; // هل تم اعتماد الوردية من قبل المدير
+  approvedAt?: string; // تاريخ ووقت اعتماد المدير
+  approvedBy?: string; // اسم المدير الذي اعتمد الوردية
+  distributedToModules?: boolean; // هل تم ترحيل وتوزيع البنود على موديولات التطبيق (الخزانة، الموردين، السلف، الديون...)
+}
+
 export interface ReconciliationSummary {
   period: AccountingPeriod;
   totalMorningIncome: number;
@@ -208,6 +292,7 @@ export type UserRole = 'manager' | 'accountant' | 'pharmacist';
 
 export interface UserPermissions {
   dashboard: boolean; // لوحة الخزانة والتسوية
+  drawer: boolean; // مصروفات وورديات درج النقدية
   income: boolean; // الدخل والورديات
   suppliers: boolean; // سداد الشركات والموردين
   expenses: boolean; // المصروفات والنثريات
@@ -222,6 +307,7 @@ export interface UserPermissions {
   quickEntry: boolean; // إضافة حركة سريعة
   closePeriod: boolean; // إقفال وإعادة فتح الشهور (المدير فقط)
   deleteRecords: boolean; // حذف العمليات والسجلات القديمة
+  backup: boolean; // النسخ الاحتياطي واستعادة البيانات
 }
 
 export interface AppUser {
@@ -236,5 +322,47 @@ export interface AppUser {
   createdAt: string;
   lastActive?: string;
   customPermissions?: Partial<UserPermissions>; // صلاحيات مخصصة يحددها المدير للصيدلي
+}
+
+export interface BackupSnapshot {
+  id: string;
+  timestamp: string;
+  label: string;
+  reason: 'manual' | 'auto' | 'pre_restore' | 'period_close';
+  recordsCount: number;
+  dataJson: string;
+  sizeBytes?: number;
+}
+
+export interface BackupPackage {
+  appName: string;
+  version: string;
+  exportedAt: string;
+  pharmacyProfile: PharmacyProfile;
+  periods: AccountingPeriod[];
+  currentPeriodId: string;
+  expenseCategories: ExpenseCategory[];
+  suppliers: Supplier[];
+  parties: Party[];
+  customers: Customer[];
+  employees: Employee[];
+  incomeRecords: IncomeRecord[];
+  supplierPayments: SupplierPayment[];
+  expenses: ExpenseRecord[];
+  walletTransactions: WalletTransaction[];
+  personalLedgers: PersonalLedgerRecord[];
+  customerDebts: CustomerDebtRecord[];
+  employeeAdvances: EmployeeAdvanceRecord[];
+  drawerShifts?: DrawerShift[];
+  auditLogs: AuditLog[];
+  users: AppUser[];
+  stats?: {
+    totalRecords: number;
+    periodsCount: number;
+    suppliersCount: number;
+    expensesCount: number;
+    incomeCount: number;
+    walletCount: number;
+  };
 }
 

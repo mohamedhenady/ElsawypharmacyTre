@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { PreparePrintButton } from './PreparePrintButton';
 import { PrintHeader, PrintSignatures } from './PrintHeader';
+import { ExpenseDistributionChart } from './ExpenseDistributionChart';
 
 export const ExpensesModule: React.FC = () => {
   const {
@@ -37,6 +38,7 @@ export const ExpensesModule: React.FC = () => {
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+  const [showAnalyticsChart, setShowAnalyticsChart] = useState<boolean>(true);
 
   // Form State
   const [formDate, setFormDate] = useState<string>(() => {
@@ -170,6 +172,18 @@ export const ExpensesModule: React.FC = () => {
             ]}
           />
           <button
+            onClick={() => setShowAnalyticsChart(!showAnalyticsChart)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+              showAnalyticsChart
+                ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+            title="إظهار / إخفاء الرسم البياني الدائري للمصروفات"
+          >
+            <PieIcon className="w-4 h-4 text-amber-600" />
+            <span>الرسم البياني</span>
+          </button>
+          <button
             onClick={() => setShowCategoryModal(true)}
             className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
           >
@@ -231,6 +245,13 @@ export const ExpensesModule: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Recharts Expense Breakdown Chart Widget */}
+      {showAnalyticsChart && (
+        <div className="no-print animate-in fade-in duration-300">
+          <ExpenseDistributionChart />
+        </div>
+      )}
 
       {/* Add / Edit Expense Form */}
       {showAddForm && (

@@ -22,6 +22,7 @@ import {
   Users,
   Briefcase,
   FileSpreadsheet,
+  Database,
   ShieldCheck,
   Calculator,
   Stethoscope,
@@ -38,6 +39,7 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onOpenPrintReport: () => void;
   onOpenWhatsAppSummary?: () => void;
+  onOpenExcelExport?: () => void;
   onToggleMobileSidebar: () => void;
   onOpenInstallModal?: () => void;
   activeTab: string;
@@ -49,6 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onOpenPrintReport,
   onOpenWhatsAppSummary,
+  onOpenExcelExport,
   onToggleMobileSidebar,
   onOpenInstallModal,
   activeTab,
@@ -92,6 +95,8 @@ export const Header: React.FC<HeaderProps> = ({
         return { label: 'إدارة المستخدمين والصلاحيات', icon: Users };
       case 'settings':
         return { label: 'بيانات وإعدادات الصيدلية', icon: SettingsIcon };
+      case 'backup':
+        return { label: 'النسخ الاحتياطي وأمان البيانات', icon: Database };
       default:
         return { label: 'الخزانة والتسوية', icon: LayoutDashboard };
     }
@@ -188,6 +193,19 @@ export const Header: React.FC<HeaderProps> = ({
                 <PlusCircle className="w-4 h-4" />
                 <span className="hidden md:inline">حركة سريعة +</span>
                 <span className="md:hidden">+</span>
+              </button>
+            )}
+
+            {/* Excel Export Quick Button */}
+            {onOpenExcelExport && (
+              <button
+                id="btn-header-excel-export"
+                onClick={onOpenExcelExport}
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold transition-colors cursor-pointer"
+                title="تخصيص وتصدير بيانات الحسابات Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                <span className="hidden lg:inline">تصدير Excel</span>
               </button>
             )}
 

@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { LoginScreen } from './components/LoginScreen';
 import { ProfileModule } from './components/ProfileModule';
 import { Dashboard } from './components/Dashboard';
+import { DrawerModule } from './components/DrawerModule';
 import { IncomeModule } from './components/IncomeModule';
 import { SuppliersModule } from './components/SuppliersModule';
 import { ExpensesModule } from './components/ExpensesModule';
@@ -13,10 +14,12 @@ import { PersonalLedgerModule } from './components/PersonalLedgerModule';
 import { CustomerDebtsModule } from './components/CustomerDebtsModule';
 import { EmployeeAdvancesModule } from './components/EmployeeAdvancesModule';
 import { SettingsModule } from './components/SettingsModule';
+import { BackupModule } from './components/BackupModule';
 import { ReportModule } from './components/ReportModule';
 import { UsersManagementModule } from './components/UsersManagementModule';
 import { QuickEntryModal } from './components/QuickEntryModal';
 import { WhatsAppSummaryModal } from './components/WhatsAppSummaryModal';
+import { ExcelExportModal } from './components/ExcelExportModal';
 import { OfflineSyncBanner } from './components/OfflineSyncBanner';
 import { usePWAInstall, PWAInstallModal } from './components/PWAInstallModal';
 import { Smartphone, Download, X, ShieldAlert } from 'lucide-react';
@@ -27,6 +30,7 @@ export const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState<boolean>(false);
   const [isWhatsAppSummaryOpen, setIsWhatsAppSummaryOpen] = useState<boolean>(false);
+  const [isExcelExportOpen, setIsExcelExportOpen] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [dismissedMobileBanner, setDismissedMobileBanner] = useState<boolean>(() => {
     try {
@@ -53,6 +57,7 @@ export const MainApp: React.FC = () => {
       // Find first allowed tab
       const candidateTabs: (keyof UserPermissions)[] = [
         'dashboard',
+        'drawer',
         'suppliers',
         'expenses',
         'income',
@@ -62,7 +67,8 @@ export const MainApp: React.FC = () => {
         'employees',
         'report',
         'profile',
-        'settings'
+        'settings',
+        'backup'
       ];
       const fallback = candidateTabs.find(tab => hasPermission(tab)) || 'dashboard';
       setActiveTab(fallback);
@@ -162,6 +168,7 @@ export const MainApp: React.FC = () => {
           onOpenSettings={() => setActiveTab('settings')}
           onOpenPrintReport={() => setActiveTab('report')}
           onOpenWhatsAppSummary={() => setIsWhatsAppSummaryOpen(true)}
+          onOpenExcelExport={() => setIsExcelExportOpen(true)}
           onOpenInstallModal={() => pwa.openInstallGuide()}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
           activeTab={activeTab}
@@ -202,8 +209,11 @@ export const MainApp: React.FC = () => {
                   onOpenQuickEntry={() => setIsQuickEntryOpen(true)}
                   onOpenPrintReport={() => setActiveTab('report')}
                   onOpenWhatsAppSummary={() => setIsWhatsAppSummaryOpen(true)}
+                  onOpenExcelExport={() => setIsExcelExportOpen(true)}
                 />
               )}
+
+              {activeTab === 'drawer' && <DrawerModule />}
 
               {activeTab === 'income' && <IncomeModule />}
 
@@ -220,7 +230,10 @@ export const MainApp: React.FC = () => {
               {activeTab === 'employees' && <EmployeeAdvancesModule />}
 
               {activeTab === 'report' && (
-                <ReportModule onOpenWhatsAppSummary={() => setIsWhatsAppSummaryOpen(true)} />
+                <ReportModule
+                  onOpenWhatsAppSummary={() => setIsWhatsAppSummaryOpen(true)}
+                  onOpenExcelExport={() => setIsExcelExportOpen(true)}
+                />
               )}
 
               {activeTab === 'profile' && (
@@ -232,6 +245,8 @@ export const MainApp: React.FC = () => {
               {activeTab === 'settings' && (
                 <SettingsModule onOpenInstallModal={() => pwa.openInstallGuide()} />
               )}
+
+              {activeTab === 'backup' && <BackupModule />}
             </>
           )}
         </main>
@@ -259,6 +274,12 @@ export const MainApp: React.FC = () => {
         <WhatsAppSummaryModal
           isOpen={isWhatsAppSummaryOpen}
           onClose={() => setIsWhatsAppSummaryOpen(false)}
+        />
+
+        {/* Excel Export & Customization Modal */}
+        <ExcelExportModal
+          isOpen={isExcelExportOpen}
+          onClose={() => setIsExcelExportOpen(false)}
         />
 
         {/* PWA Mobile Install Modal */}

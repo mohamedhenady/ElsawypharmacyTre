@@ -12,6 +12,7 @@ import {
   Briefcase,
   FileSpreadsheet,
   Settings,
+  Database,
   PlusCircle,
   Building2,
   ChevronRight,
@@ -30,7 +31,8 @@ import {
   UserCog,
   User,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  Vault
 } from 'lucide-react';
 import { UserPermissions } from '../types';
 
@@ -105,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const rawNavGroups: NavGroup[] = [
     {
-      groupTitle: 'الرئيسية',
+      groupTitle: 'الرئيسية والورديات',
       items: [
         {
           id: 'dashboard',
@@ -113,6 +115,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'لوحة الخزانة والتسوية',
           shortLabel: 'الرئيسية',
           icon: LayoutDashboard
+        },
+        {
+          id: 'drawer',
+          permKey: 'drawer' as keyof UserPermissions,
+          label: 'مصروفات درج النقدية',
+          shortLabel: 'درج النقدية',
+          icon: Vault,
+          badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
         }
       ]
     },
@@ -219,6 +229,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'بيانات الصيدلية والإعدادات',
           shortLabel: 'الإعدادات',
           icon: Settings
+        },
+        {
+          id: 'backup',
+          permKey: 'backup' as keyof UserPermissions,
+          label: 'النسخ الاحتياطي',
+          shortLabel: 'النسخ الاحتياطي',
+          icon: Database
         }
       ]
     }

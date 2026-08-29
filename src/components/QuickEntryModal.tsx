@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTreasury } from '../context/TreasuryContext';
 import {
   TrendingUp,
@@ -11,7 +11,9 @@ import {
   X,
   Plus,
   CheckCheck,
-  ShieldCheck
+  ShieldCheck,
+  CornerDownLeft,
+  Command
 } from 'lucide-react';
 
 interface QuickEntryModalProps {
@@ -20,6 +22,8 @@ interface QuickEntryModalProps {
 }
 
 export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClose }) => {
+  const formRef = useRef<HTMLFormElement>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
   const {
     pharmacyProfile,
     currentPeriod,
@@ -55,11 +59,56 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
   >(() => (tabs[0]?.id as any) || 'income');
 
   // If activeType is not permitted, switch to first allowed tab
-  React.useEffect(() => {
+  useEffect(() => {
     if (tabs.length > 0 && !tabs.some(t => t.id === activeType)) {
       setActiveType(tabs[0].id as any);
     }
   }, [tabs, activeType]);
+
+  // Auto-focus amount field on open or type switch
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        amountInputRef.current?.focus();
+        amountInputRef.current?.select();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, activeType]);
+
+  // Keyboard shortcuts listener: Esc to close, Enter/Ctrl+Enter to save, Alt+1..7 to switch tabs
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape -> close modal
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+
+      // Alt + Number (1-7) -> switch active tab
+      if (e.altKey && e.key >= '1' && e.key <= '7') {
+        const index = parseInt(e.key, 10) - 1;
+        if (tabs[index]) {
+          e.preventDefault();
+          setActiveType(tabs[index].id as any);
+          return;
+        }
+      }
+
+      // Ctrl+Enter or Cmd+Enter -> submit form immediately
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        formRef.current?.requestSubmit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, onClose, tabs]);
 
   // Common fields
   const [date, setDate] = useState<string>(() => {
@@ -88,7 +137,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
   // Wallet specific
   const [walletMethod, setWalletMethod] = useState<'instapay' | 'vodafone_cash' | 'bank_transfer' | 'orange_cash' | 'etisalat_cash' | 'wallet'>('instapay');
   const [walletDirection, setWalletDirection] = useState<'in' | 'out'>('in');
-  const [walletTag, setWalletTag] = useState<string>('عام');
+  const [walletTag, setWalletTag] = useState<string>('');
 
   // Personal Ledger specific
   const [partyId, setPartyId] = useState<string>(parties[0]?.id || '');
@@ -155,14 +204,15 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
         notes
       });
     } else if (activeType === 'wallet') {
+      const cleanLabel = (walletTag.trim() || notes.trim());
       addWalletTransaction({
         periodId: currentPeriod.id,
         date,
         method: walletMethod,
         inAmount: walletDirection === 'in' ? amt : 0,
         outAmount: walletDirection === 'out' ? amt : 0,
-        tag: walletTag || 'عام',
-        notes
+        tag: cleanLabel,
+        notes: cleanLabel
       });
     } else if (activeType === 'personal') {
       if (!partyId) {
@@ -222,25 +272,32 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-emerald-600" />
-              <span>تسجيل حركة مالية سريعة</span>
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-emerald-600" />
+                <span>تسجيل حركة مالية سريعة</span>
+              </h3>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-mono font-bold border border-slate-200">
+                <kbd>Enter ↵</kbd> للحفظ | <kbd>Esc</kbd> للإغلاق
+              </span>
+            </div>
             <p className="text-xs text-slate-500 mt-0.5">
               إضافة قيد مباشر لشهر <strong className="text-slate-800">{currentPeriod.name}</strong>
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="إغلاق (Esc)"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
           >
+            <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">Esc</span>
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Type Selector Buttons */}
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 my-4 bg-slate-100 p-1.5 rounded-2xl">
-          {tabs.map(tab => {
+          {tabs.map((tab, idx) => {
             const Icon = tab.icon;
             const isSel = activeType === tab.id;
             return (
@@ -248,12 +305,16 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveType(tab.id as any)}
-                className={`py-2 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                title={`التبويب ${tab.label} (Alt+${idx + 1})`}
+                className={`py-2 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1 cursor-pointer relative group ${
                   isSel
                     ? 'bg-white text-slate-900 shadow-xs scale-102'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
+                <span className="absolute top-1 left-1 text-[9px] font-mono text-slate-400 opacity-60 group-hover:opacity-100">
+                  {idx + 1}
+                </span>
                 <Icon className={`w-4 h-4 ${isSel ? tab.color : 'text-slate-400'}`} />
                 <span className="text-[11px] truncate w-full text-center">{tab.label}</span>
               </button>
@@ -262,7 +323,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Dynamic Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
@@ -272,6 +333,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                 المبلغ المطلوب ({pharmacyProfile.currency}):
               </label>
               <input
+                ref={amountInputRef}
                 type="number"
                 step="any"
                 required
@@ -470,15 +532,42 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">الوسم / التصنيف المنظم:</label>
+              <div className="sm:col-span-3">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700">الملاحظات والبيان (الوسم - اختياري):</label>
+                  <span className="text-[10px] text-slate-400">يمكن تركه فارغاً</span>
+                </div>
                 <input
                   type="text"
                   value={walletTag}
                   onChange={(e) => setWalletTag(e.target.value)}
-                  placeholder="مثال: د. حبيب، مصباح، استبدال كاش..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white"
+                  placeholder="اكتب الملاحظة أو اختر وسماً سريعاً (أو اتركه فارغاً)..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:border-purple-600 focus:outline-none"
                 />
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-[10px] text-slate-400">وسوم وملاحظات مقترحة:</span>
+                  {['تحويل دخل', 'سداد مورد', 'د. حبيب', 'استبدال كاش', 'عميل', 'مصاريف تحويل'].map(tag => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setWalletTag(tag)}
+                      className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
+                        walletTag === tag ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                  {walletTag && (
+                    <button
+                      type="button"
+                      onClick={() => setWalletTag('')}
+                      className="text-[10px] text-rose-500 hover:underline px-1 cursor-pointer"
+                    >
+                      مسح
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -617,33 +706,54 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
             </div>
           )}
 
-          {/* Notes */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات وبيان الحركة:</label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="أي تفاصيل أو أرقام فواتير أو أسماء..."
-              className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-emerald-600 focus:outline-none text-xs bg-white"
-            />
-          </div>
+          {/* Notes (for other types) */}
+          {activeType !== 'wallet' && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات وبيان الحركة:</label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="أي تفاصيل أو أرقام فواتير أو أسماء..."
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-emerald-600 focus:outline-none text-xs bg-white"
+              />
+            </div>
+          )}
 
-          {/* Submit */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-            >
-              إلغاء
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-colors cursor-pointer"
-            >
-              حفظ وتسجيل الحركة
-            </button>
+          {/* Submit & Shortcut hints footer */}
+          <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 flex-wrap">
+            <div className="flex items-center gap-2 text-[11px] text-slate-400">
+              <span className="hidden sm:inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold font-mono">
+                <CornerDownLeft className="w-3 h-3 text-emerald-600" />
+                <span>Enter</span>
+              </span>
+              <span className="hidden sm:inline">للحفظ المباشر</span>
+              <span className="text-slate-300 hidden sm:inline">•</span>
+              <span className="hidden sm:inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold font-mono">
+                <span>Esc</span>
+              </span>
+              <span className="hidden sm:inline">للإغلاق</span>
+            </div>
+
+            <div className="flex items-center gap-2 mr-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                title="إلغاء وإغلاق (Esc)"
+                className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+              >
+                <span>إلغاء</span>
+                <kbd className="text-[10px] bg-slate-200/80 px-1 py-0.2 rounded text-slate-500 font-mono">Esc</kbd>
+              </button>
+              <button
+                type="submit"
+                title="حفظ وتسجيل الحركة (Enter)"
+                className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span>حفظ وتسجيل الحركة</span>
+                <kbd className="text-[10px] bg-emerald-700/80 text-emerald-100 px-1.5 py-0.2 rounded font-mono font-bold">↵ Enter</kbd>
+              </button>
+            </div>
           </div>
 
         </form>

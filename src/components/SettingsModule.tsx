@@ -37,9 +37,11 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
     updatePeriod,
     closePeriod,
     reopenPeriod,
-    resetToDemoData,
+    resetToDefaults,
+    downloadBackupFile,
     exportDataJson,
-    importDataJson
+    importDataJson,
+    getPeriodSummary
   } = useTreasury();
 
   // Form State for Pharmacy Profile
@@ -58,9 +60,15 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
 
   // New Month / Period State
   const [showAddPeriodModal, setShowAddPeriodModal] = useState(false);
-  const [newPeriodId, setNewPeriodId] = useState('');
+  const [newPeriodYear, setNewPeriodYear] = useState<number>(new Date().getFullYear());
+  const [newPeriodMonth, setNewPeriodMonth] = useState<number>(new Date().getMonth() + 1);
   const [newPeriodName, setNewPeriodName] = useState('');
   const [newPeriodCarried, setNewPeriodCarried] = useState('');
+  const [newPeriodNotes, setNewPeriodNotes] = useState('');
+
+  // Editing Carried Over inline
+  const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
+  const [editCarriedValue, setEditCarriedValue] = useState<string>('');
 
   // Sample Logo Presets
   const sampleLogos = [
@@ -103,19 +111,24 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
 
   const handleCreatePeriod = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPeriodId.trim() || !newPeriodName.trim()) return;
+    if (!newPeriodName.trim()) return;
 
-    addPeriod({
-      id: newPeriodId.trim(),
-      name: newPeriodName.trim(),
-      carriedOverBalance: parseFloat(newPeriodCarried) || 0,
-      isClosed: false
-    });
+    const carriedVal = newPeriodCarried.trim() !== '' ? parseFloat(newPeriodCarried) : undefined;
+    addPeriod(newPeriodYear, newPeriodMonth, newPeriodName.trim(), newPeriodNotes.trim(), carriedVal);
 
     setShowAddPeriodModal(false);
-    setNewPeriodId('');
     setNewPeriodName('');
     setNewPeriodCarried('');
+    setNewPeriodNotes('');
+  };
+
+  const handleSaveCarriedOver = (periodId: string) => {
+    const val = editCarriedValue.trim() !== '' ? parseFloat(editCarriedValue) : undefined;
+    updatePeriod(periodId, {
+      customCarriedOver: val !== undefined && !isNaN(val) ? val : undefined
+    });
+    setEditingPeriodId(null);
+    setEditCarriedValue('');
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -411,66 +424,144 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {periods.map(p => {
             const isCurrent = p.id === currentPeriodId;
+            const pSummary = getPeriodSummary(p.id);
+            const isEditingThis = editingPeriodId === p.id;
+
             return (
               <div
                 key={p.id}
-                className={`p-4 rounded-xl border-2 transition-all flex flex-col justify-between ${
+                className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between ${
                   isCurrent
-                    ? 'border-emerald-500 bg-emerald-50/30 shadow-xs'
-                    : 'border-slate-200 bg-slate-50 hover:bg-white'
+                    ? 'border-emerald-500 bg-emerald-50/40 shadow-xs'
+                    : 'border-slate-200 bg-slate-50/60 hover:bg-white'
                 }`}
               >
-                <div>
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-sm">{p.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">{p.name}</span>
+                      <span className="font-mono text-[10px] bg-slate-200/80 px-2 py-0.5 rounded text-slate-600 font-semibold">{p.id}</span>
+                    </div>
                     {p.isClosed ? (
-                      <span className="text-[10px] px-2 py-0.5 bg-slate-200 text-slate-700 rounded-full font-bold flex items-center gap-1">
-                        <Lock className="w-3 h-3" /> مقفل
+                      <span className="text-[10px] px-2.5 py-0.5 bg-slate-200 text-slate-700 rounded-full font-bold flex items-center gap-1">
+                        <Lock className="w-3 h-3 text-slate-600" /> مقفل
                       </span>
                     ) : (
-                      <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold flex items-center gap-1">
-                        <Unlock className="w-3 h-3" /> مفتوح
+                      <span className="text-[10px] px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold flex items-center gap-1">
+                        <Unlock className="w-3 h-3 text-emerald-600" /> مفتوح
                       </span>
                     )}
                   </div>
                   
-                  <div className="text-xs text-slate-500 mt-2 space-y-1">
-                    <div>كود الفترة: <span className="font-mono text-slate-700">{p.id}</span></div>
-                    <div>المرحل من السابق: <span className="font-mono font-bold text-slate-800">{p.carriedOverBalance} {currency}</span></div>
+                  {/* Financial Quick Metrics */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/80 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">المرحّل من السابق:</span>
+                      {isEditingThis ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="any"
+                            value={editCarriedValue}
+                            onChange={(e) => setEditCarriedValue(e.target.value)}
+                            placeholder="0.00"
+                            className="w-24 px-2 py-1 text-xs border border-emerald-500 rounded-lg font-mono font-bold focus:outline-none"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveCarriedOver(p.id)}
+                            className="px-2 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold cursor-pointer"
+                          >
+                            حفظ
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPeriodId(null)}
+                            className="px-2 py-1 bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold cursor-pointer"
+                          >
+                            إلغاء
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-slate-900">
+                            {pSummary.carriedOverBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })} {currency}
+                          </span>
+                          {p.customCarriedOver !== undefined && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold border border-blue-200" title="محدد يدوياً">
+                              يدوي
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingPeriodId(p.id);
+                              setEditCarriedValue(p.customCarriedOver !== undefined ? String(p.customCarriedOver) : String(pSummary.carriedOverBalance));
+                            }}
+                            className="text-[10px] text-emerald-700 hover:text-emerald-900 underline font-bold cursor-pointer ml-1"
+                            title="تعديل المحول من شهر سابق يدوياً"
+                          >
+                            تعديل
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-slate-100 pt-1.5 text-slate-600">
+                      <span>صافي الخزانة للشهر:</span>
+                      <span className="font-mono font-bold text-emerald-800">
+                        {pSummary.netTreasury.toLocaleString('en-US', { minimumFractionDigits: 2 })} {currency}
+                      </span>
+                    </div>
+
                     {p.actualCashCounted !== undefined && (
-                      <div>العد الفعلي: <span className="font-mono font-bold text-emerald-700">{p.actualCashCounted} {currency}</span></div>
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-1.5 text-slate-600">
+                        <span>العد الفعلي بالدرج:</span>
+                        <span className="font-mono font-bold text-slate-900">
+                          {p.actualCashCounted.toLocaleString('en-US', { minimumFractionDigits: 2 })} {currency}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-4 pt-2 border-t border-slate-200 flex items-center justify-between">
+                <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between gap-2">
                   {!isCurrent ? (
                     <button
                       onClick={() => setCurrentPeriodId(p.id)}
-                      className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer"
+                      className="text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline cursor-pointer"
                     >
                       تفعيل وعرض هذا الشهر ←
                     </button>
                   ) : (
-                    <span className="text-xs font-bold text-emerald-800">الشهر النشط حالياً ✓</span>
+                    <span className="text-xs font-bold text-emerald-800 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                      الشهر النشط حالياً
+                    </span>
                   )}
 
                   {p.isClosed ? (
                     <button
                       onClick={() => reopenPeriod(p.id)}
-                      className="text-[11px] text-amber-700 hover:underline cursor-pointer"
+                      className="text-[11px] font-bold text-amber-700 hover:underline cursor-pointer"
                     >
                       إلغاء الإقفال
                     </button>
                   ) : (
                     <button
-                      onClick={() => closePeriod(p.id)}
-                      className="text-[11px] text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                      onClick={() => {
+                        const actual = prompt('أدخل النقدية الفعلية المحصية بالدرج لإقفال الشهر:', String(pSummary.expectedCash));
+                        if (actual !== null) {
+                          closePeriod(p.id, parseFloat(actual) || 0);
+                        }
+                      }}
+                      className="text-[11px] font-bold text-slate-600 hover:text-slate-900 underline cursor-pointer"
                     >
-                      إقفال الشهر
+                      إقفال واعتماد الشهر
                     </button>
                   )}
                 </div>
@@ -503,7 +594,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
               </p>
             </div>
             <button
-              onClick={exportDataJson}
+              onClick={() => downloadBackupFile()}
               className="mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
@@ -542,7 +633,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
             <button
               onClick={() => {
                 if (confirm('هل أنت متأكد من استعادة البيانات النموذجية الأولية؟ سيتم مسح التعديلات غير المصدرة.')) {
-                  resetToDemoData();
+                  resetToDefaults();
                 }
               }}
               className="mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer"
@@ -621,16 +712,34 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
             </h3>
 
             <form onSubmit={handleCreatePeriod} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">كود الشهر (YYYY-MM):</label>
-                <input
-                  type="text"
-                  required
-                  value={newPeriodId}
-                  onChange={(e) => setNewPeriodId(e.target.value)}
-                  placeholder="2026-04"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono focus:border-emerald-600 focus:outline-none"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">السنة:</label>
+                  <input
+                    type="number"
+                    required
+                    value={newPeriodYear}
+                    onChange={(e) => setNewPeriodYear(parseInt(e.target.value) || new Date().getFullYear())}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono focus:border-emerald-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">رقم الشهر (1-12):</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    required
+                    value={newPeriodMonth}
+                    onChange={(e) => {
+                      const m = parseInt(e.target.value) || 1;
+                      setNewPeriodMonth(m);
+                      const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+                      setNewPeriodName(`${monthNames[m - 1]} ${newPeriodYear}`);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono focus:border-emerald-600 focus:outline-none"
+                  />
+                </div>
               </div>
 
               <div>
@@ -640,20 +749,36 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onOpenInstallMod
                   required
                   value={newPeriodName}
                   onChange={(e) => setNewPeriodName(e.target.value)}
-                  placeholder="أبريل 2026"
+                  placeholder="مثال: أبريل 2026"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold focus:border-emerald-600 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">الرصيد المرحل من الشهر السابق ({currency}):</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  المرحل من شهر سابق يدوياً ({currency}):
+                </label>
                 <input
                   type="number"
                   step="any"
                   value={newPeriodCarried}
                   onChange={(e) => setNewPeriodCarried(e.target.value)}
-                  placeholder="0.00"
+                  placeholder="اتركه فارغاً للاحتساب التلقائي من الشهر السابق"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono focus:border-emerald-600 focus:outline-none"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  * إذا قمت بكتابة مبلغ هنا، سيتم اعتماده مباشرة كرصيد افتتاح لهذا الشهر بدلاً من رصيد الإغلاق التلقائي.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات (اختياري):</label>
+                <input
+                  type="text"
+                  value={newPeriodNotes}
+                  onChange={(e) => setNewPeriodNotes(e.target.value)}
+                  placeholder="ملاحظات افتتاح الدورة..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:border-emerald-600 focus:outline-none"
                 />
               </div>
 

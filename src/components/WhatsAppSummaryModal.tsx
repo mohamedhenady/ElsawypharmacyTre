@@ -90,8 +90,8 @@ export const WhatsAppSummaryModal: React.FC<WhatsAppSummaryModalProps> = ({
   const totalDayExpenses = dayExpenses.reduce((sum, r) => sum + r.amount, 0);
 
   const dayWallet = walletTransactions.filter(r => r.date === selectedDate);
-  const totalWalletIn = dayWallet.filter(w => w.type === 'cash_in' || w.type === 'instapay_in').reduce((s, w) => s + w.amount, 0);
-  const totalWalletOut = dayWallet.filter(w => w.type === 'cash_out' || w.type === 'instapay_out').reduce((s, w) => s + w.amount, 0);
+  const totalWalletIn = dayWallet.reduce((s, w) => s + (Number(w.inAmount) || 0), 0);
+  const totalWalletOut = dayWallet.reduce((s, w) => s + (Number(w.outAmount) || 0), 0);
 
   const dayDebts = customerDebts.filter(d => d.date === selectedDate);
   const totalDebtsAdded = dayDebts.filter(d => d.type === 'debt_add').reduce((s, d) => s + d.amount, 0);

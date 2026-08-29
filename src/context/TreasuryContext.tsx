@@ -18,7 +18,14 @@ import {
   ReconciliationSummary,
   AppUser,
   UserPermissions,
-  UserRole
+  UserRole,
+  BackupSnapshot,
+  BackupPackage,
+  DrawerShift,
+  DrawerExpenseItem,
+  InstaPayTransfer,
+  WalletTransfer,
+  ShiftType
 } from '../types';
 import {
   initialPharmacyProfile,
@@ -36,13 +43,15 @@ import {
   initialCustomerDebts,
   initialEmployeeAdvances,
   initialAuditLogs,
-  initialUsers
+  initialUsers,
+  initialDrawerShifts
 } from '../data/initialData';
 
 export const computeUserPermissions = (user: AppUser): UserPermissions => {
   if (user.role === 'manager') {
     return {
       dashboard: true,
+      drawer: true,
       income: true,
       suppliers: true,
       expenses: true,
@@ -57,13 +66,15 @@ export const computeUserPermissions = (user: AppUser): UserPermissions => {
       quickEntry: true,
       closePeriod: true,
       deleteRecords: true,
+      backup: true,
     };
   }
 
   if (user.role === 'accountant') {
-    // المحاسب: الداشبورد + سداد الشركات + المصروفات فقط
+    // المحاسب: الداشبورد + سداد الشركات + المصروفات + الدرج
     return {
       dashboard: true,
+      drawer: true,
       income: false,
       suppliers: true,
       expenses: true,
@@ -75,30 +86,33 @@ export const computeUserPermissions = (user: AppUser): UserPermissions => {
       profile: true,
       settings: false,
       users: false,
-      quickEntry: true, // allows quick entry for suppliers & expenses
+      quickEntry: true,
       closePeriod: false,
       deleteRecords: false,
+      backup: false,
     };
   }
 
-  // الصيدلي: يتم تحديد صلاحياته من حساب المدير فقط
+  // الصيدلي: يتم تحديد صلاحياته من حساب المدير فقط (الافتراضي هو قسم إقفال الدرج فقط، ود. جهاد صلاحياتها مفصلة)
   const custom = user.customPermissions || {};
   return {
     dashboard: !!custom.dashboard,
-    income: custom.income !== undefined ? !!custom.income : true,
+    drawer: custom.drawer !== undefined ? !!custom.drawer : true,
+    income: !!custom.income,
     suppliers: !!custom.suppliers,
     expenses: !!custom.expenses,
     wallet: !!custom.wallet,
     personal: !!custom.personal,
-    customers: custom.customers !== undefined ? !!custom.customers : true,
+    customers: !!custom.customers,
     employees: !!custom.employees,
     report: !!custom.report,
     profile: true,
     settings: !!custom.settings,
-    users: false, // إدارة المستخدمين محصورة في المدير
-    quickEntry: custom.quickEntry !== undefined ? !!custom.quickEntry : true,
-    closePeriod: false, // إقفال الشهر محصور في المدير
+    users: false,
+    quickEntry: !!custom.quickEntry,
+    closePeriod: false,
     deleteRecords: !!custom.deleteRecords,
+    backup: !!custom.backup,
   };
 };
 
@@ -110,7 +124,7 @@ interface TreasuryContextType {
   currentPeriodId: string;
   setCurrentPeriodId: (id: string) => void;
   currentPeriod: AccountingPeriod;
-  addPeriod: (year: number, month: number, name: string, notes?: string) => void;
+  addPeriod: (year: number, month: number, name: string, notes?: string, customCarriedOver?: number) => void;
   updatePeriod: (id: string, updates: Partial<AccountingPeriod>) => void;
   deletePeriod: (id: string) => void;
   closePeriod: (id: string, actualCash: number) => void;
@@ -122,7 +136,7 @@ interface TreasuryContextType {
   deleteExpenseCategory: (id: string) => void;
 
   suppliers: Supplier[];
-  addSupplier: (supplier: Omit<Supplier, 'id' | 'createdAt'>) => void;
+  addSupplier: (supplier: Omit<Supplier, 'id' | 'createdAt'>) => Supplier;
   updateSupplier: (id: string, updates: Partial<Supplier>) => void;
   deleteSupplier: (id: string) => void;
 
@@ -132,7 +146,7 @@ interface TreasuryContextType {
   deleteParty: (id: string) => void;
 
   customers: Customer[];
-  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
+  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => Customer;
   updateCustomer: (id: string, updates: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
 
@@ -179,6 +193,38 @@ interface TreasuryContextType {
   updateEmployeeAdvance: (id: string, updates: Partial<EmployeeAdvanceRecord>) => void;
   deleteEmployeeAdvance: (id: string) => void;
 
+  // Cash Drawer & Shifts Management (مصروفات وإقفال درج النقدية)
+  drawerShifts: DrawerShift[];
+  activeShift: DrawerShift | null;
+  openShift: (params: {
+    date: string;
+    time?: string;
+    dayName?: string;
+    pharmacistName: string;
+    pharmacistId?: string;
+    shiftType: ShiftType;
+    openingBalance: number;
+    notes?: string;
+  }) => DrawerShift;
+  updateActiveShift: (updates: Partial<DrawerShift>) => void;
+  addDrawerExpense: (expense: Omit<DrawerExpenseItem, 'id' | 'shiftId' | 'createdAt'>) => void;
+  removeDrawerExpense: (expenseId: string) => void;
+  addInstaPayTransfer: (transfer: Omit<InstaPayTransfer, 'id' | 'shiftId' | 'createdAt'>) => void;
+  removeInstaPayTransfer: (transferId: string) => void;
+  addWalletTransfer: (transfer: Omit<WalletTransfer, 'id' | 'shiftId' | 'createdAt'>) => void;
+  removeWalletTransfer: (transferId: string) => void;
+  closeShift: (params: {
+    leftInDrawer: number;
+    transferredToVault: number;
+    distributeToModules?: boolean;
+    notes?: string;
+    lockAccountOnClose?: boolean;
+  }) => DrawerShift;
+  reopenShift: (shiftId: string) => void;
+  deleteDrawerShift: (shiftId: string) => void;
+  approveAndDistributeShift: (shiftId: string) => { success: boolean; error?: string };
+  lastClosedShift: DrawerShift | undefined;
+
   // Calculated Reconciliation
   summary: ReconciliationSummary;
   getPeriodSummary: (periodId: string) => ReconciliationSummary;
@@ -186,6 +232,14 @@ interface TreasuryContextType {
   auditLogs: AuditLog[];
   exportDataJson: () => string;
   importDataJson: (jsonStr: string) => boolean;
+  downloadBackupFile: (customFilename?: string) => void;
+  inspectBackupJson: (jsonStr: string) => { isValid: boolean; error?: string; metadata?: any };
+  localSnapshots: BackupSnapshot[];
+  createLocalSnapshot: (label?: string, reason?: BackupSnapshot['reason']) => BackupSnapshot;
+  restoreLocalSnapshot: (id: string) => boolean;
+  deleteLocalSnapshot: (id: string) => void;
+  clearAllSnapshots: () => void;
+  lastBackupTime: string | null;
   resetToDefaults: () => void;
 
   // User Authentication & Permissions
@@ -340,6 +394,24 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   });
 
+  const [drawerShifts, setDrawerShifts] = useState<DrawerShift[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_drawer_shifts`);
+      return saved ? JSON.parse(saved) : initialDrawerShifts;
+    } catch {
+      return initialDrawerShifts;
+    }
+  });
+
+  const [activeShift, setActiveShift] = useState<DrawerShift | null>(() => {
+    try {
+      const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_active_shift`);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
     try {
       const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_logs`);
@@ -406,6 +478,8 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         localStorage.setItem(`${LOCAL_STORAGE_KEY}_personal`, JSON.stringify(personalLedgers));
         localStorage.setItem(`${LOCAL_STORAGE_KEY}_cdebts`, JSON.stringify(customerDebts));
         localStorage.setItem(`${LOCAL_STORAGE_KEY}_eadvances`, JSON.stringify(employeeAdvances));
+        localStorage.setItem(`${LOCAL_STORAGE_KEY}_drawer_shifts`, JSON.stringify(drawerShifts));
+        localStorage.setItem(`${LOCAL_STORAGE_KEY}_active_shift`, JSON.stringify(activeShift));
         localStorage.setItem(`${LOCAL_STORAGE_KEY}_logs`, JSON.stringify(auditLogs));
         localStorage.setItem(`${LOCAL_STORAGE_KEY}_users`, JSON.stringify(users));
         localStorage.setItem(`${LOCAL_STORAGE_KEY}_current_user_id`, currentUserId);
@@ -430,6 +504,8 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     personalLedgers,
     customerDebts,
     employeeAdvances,
+    drawerShifts,
+    activeShift,
     auditLogs,
     users,
     currentUserId
@@ -597,7 +673,7 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   ]);
 
   // Period actions
-  const addPeriod = (year: number, month: number, name: string, notes?: string) => {
+  const addPeriod = (year: number, month: number, name: string, notes?: string, customCarriedOver?: number) => {
     const id = `${year}-${String(month).padStart(2, '0')}`;
     if (periods.some(p => p.id === id)) {
       alert('هذه الفترة موجودة بالفعل!');
@@ -609,11 +685,12 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       month,
       name,
       isClosed: false,
+      customCarriedOver: customCarriedOver !== undefined && !isNaN(customCarriedOver) ? customCarriedOver : undefined,
       notes: notes || ''
     };
     setPeriods(prev => [...prev, newPeriod]);
     setCurrentPeriodId(id);
-    addAuditLog('create', 'فترة جديدة', `تم إنشاء دورة محاسبية جديدة: ${name}`);
+    addAuditLog('create', 'فترة جديدة', `تم إنشاء دورة محاسبية جديدة: ${name}${customCarriedOver !== undefined ? ` برصيد مرحل يدوي ${customCarriedOver} ج.م` : ''}`);
   };
 
   const updatePeriod = (id: string, updates: Partial<AccountingPeriod>) => {
@@ -674,14 +751,15 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Suppliers
-  const addSupplier = (supplier: Omit<Supplier, 'id' | 'createdAt'>) => {
+  const addSupplier = (supplier: Omit<Supplier, 'id' | 'createdAt'>): Supplier => {
     const newSup: Supplier = {
       ...supplier,
-      id: `sup-${Date.now()}`,
+      id: `sup-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       createdAt: new Date().toISOString()
     };
     setSuppliers(prev => [...prev, newSup]);
     addAuditLog('create', 'مورد جديد', `إضافة مورد: ${supplier.name}`);
+    return newSup;
   };
 
   const updateSupplier = (id: string, updates: Partial<Supplier>) => {
@@ -712,14 +790,15 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Customers
-  const addCustomer = (customer: Omit<Customer, 'id' | 'createdAt'>) => {
+  const addCustomer = (customer: Omit<Customer, 'id' | 'createdAt'>): Customer => {
     const newC: Customer = {
       ...customer,
-      id: `cust-${Date.now()}`,
+      id: `cust-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       createdAt: new Date().toISOString()
     };
     setCustomers(prev => [...prev, newC]);
     addAuditLog('create', 'عميل جديد', `إضافة عميل: ${customer.name}`);
+    return newC;
   };
 
   const updateCustomer = (id: string, updates: Partial<Customer>) => {
@@ -874,7 +953,8 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       createdAt: new Date().toISOString()
     };
     setWalletTransactions(prev => [newT, ...prev]);
-    const details = tx.inAmount > 0 ? `دخول محفظة ${tx.inAmount} ج.م (${tx.tag})` : `خروج محفظة ${tx.outAmount} ج.م (${tx.tag})`;
+    const label = tx.notes || tx.tag || 'بدون ملاحظة';
+    const details = tx.inAmount > 0 ? `دخول محفظة ${tx.inAmount} ج.م (${label})` : `خروج محفظة ${tx.outAmount} ج.م (${label})`;
     addAuditLog('create', 'المحفظة الرقمية', details, tx.inAmount || tx.outAmount);
   };
 
@@ -957,11 +1037,416 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addAuditLog('delete', 'سلف الموظفين', `حذف سلفة موظف`);
   };
 
-  // Export / Import / Reset
+  // Cash Drawer & Shift Management (مصروفات وإقفال درج النقدية)
+  const openShift = (params: {
+    date: string;
+    time?: string;
+    dayName?: string;
+    pharmacistName: string;
+    pharmacistId?: string;
+    shiftType: ShiftType;
+    openingBalance: number;
+    notes?: string;
+  }): DrawerShift => {
+    const newShift: DrawerShift = {
+      id: `shift-${Date.now()}`,
+      periodId: currentPeriodId,
+      date: params.date,
+      time: params.time || new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+      dayName: params.dayName,
+      pharmacistName: params.pharmacistName,
+      pharmacistId: params.pharmacistId,
+      shiftType: params.shiftType,
+      openingBalance: Number(params.openingBalance) || 0,
+      status: 'open',
+      openedAt: new Date().toISOString(),
+      expenses: [],
+      totalExpenses: 0,
+      instaPayTransfers: [],
+      totalInstaPay: 0,
+      totalSales: 0,
+      leftInDrawer: 0,
+      transferredToVault: 0,
+      notes: params.notes || ''
+    };
+    setActiveShift(newShift);
+    addAuditLog(
+      'create',
+      'درج النقدية',
+      `فتح وردية جديدة (${params.shiftType === 'morning' ? 'صباحية' : params.shiftType === 'evening' ? 'مسائية' : 'ليلية'}) للصيدلي: ${params.pharmacistName} برصيد استلام ${params.openingBalance} ج.م`
+    );
+    return newShift;
+  };
+
+  const updateActiveShift = (updates: Partial<DrawerShift>) => {
+    setActiveShift(prev => {
+      if (!prev) return null;
+      const updated = { ...prev, ...updates };
+      if (updates.expenses) {
+        updated.totalExpenses = updates.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      }
+      if (updates.instaPayTransfers) {
+        updated.totalInstaPay = updates.instaPayTransfers.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      }
+      return updated;
+    });
+  };
+
+  const addDrawerExpense = (expense: Omit<DrawerExpenseItem, 'id' | 'shiftId' | 'createdAt'>) => {
+    if (!activeShift) return;
+    const newExp: DrawerExpenseItem = {
+      ...expense,
+      id: `dexp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      shiftId: activeShift.id,
+      createdAt: new Date().toISOString()
+    };
+    const updatedExpenses = [...activeShift.expenses, newExp];
+    const totalExpenses = updatedExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    setActiveShift({
+      ...activeShift,
+      expenses: updatedExpenses,
+      totalExpenses
+    });
+    addAuditLog('create', 'مصروفات الدرج', `إضافة بند خارج من الدرج: ${expense.title} بقيمة ${expense.amount} ج.م`, expense.amount);
+  };
+
+  const removeDrawerExpense = (expenseId: string) => {
+    if (!activeShift) return;
+    const updatedExpenses = activeShift.expenses.filter(e => e.id !== expenseId);
+    const totalExpenses = updatedExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    setActiveShift({
+      ...activeShift,
+      expenses: updatedExpenses,
+      totalExpenses
+    });
+    addAuditLog('delete', 'مصروفات الدرج', `حذف بند منصرف من الدرج`);
+  };
+
+  const addInstaPayTransfer = (transfer: Omit<InstaPayTransfer, 'id' | 'shiftId' | 'createdAt'>) => {
+    if (!activeShift) return;
+    const newTx: InstaPayTransfer = {
+      ...transfer,
+      id: `insta-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      shiftId: activeShift.id,
+      createdAt: new Date().toISOString()
+    };
+    const updatedTransfers = [...(activeShift.instaPayTransfers || []), newTx];
+    const totalInstaPay = updatedTransfers.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    setActiveShift({
+      ...activeShift,
+      instaPayTransfers: updatedTransfers,
+      totalInstaPay
+    });
+    addAuditLog('create', 'إنستاباي/محافظ الوردية', `تسجيل تحويل إلكتروني ${transfer.amount} ج.م (${transfer.sender || 'عميل'})`, transfer.amount);
+  };
+
+  const removeInstaPayTransfer = (transferId: string) => {
+    if (!activeShift) return;
+    const updatedTransfers = (activeShift.instaPayTransfers || []).filter(t => t.id !== transferId);
+    const totalInstaPay = updatedTransfers.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    setActiveShift({
+      ...activeShift,
+      instaPayTransfers: updatedTransfers,
+      totalInstaPay
+    });
+    addAuditLog('delete', 'إنستاباي الوردية', `حذف تحويل إنستاباي`);
+  };
+
+  const addWalletTransfer = (transfer: Omit<WalletTransfer, 'id' | 'shiftId' | 'createdAt'>) => {
+    if (!activeShift) return;
+    const newTx: WalletTransfer = {
+      ...transfer,
+      id: `wallet-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      shiftId: activeShift.id,
+      createdAt: new Date().toISOString()
+    };
+    const updatedTransfers = [...(activeShift.walletTransfers || []), newTx];
+    const totalWallet = updatedTransfers.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    setActiveShift({
+      ...activeShift,
+      walletTransfers: updatedTransfers,
+      totalWallet
+    });
+    addAuditLog('create', 'تحويلات المحفظة بالوردية', `تسجيل تحويل محفظة ${transfer.amount} ج.م (${transfer.sender || 'عميل'})`, transfer.amount);
+  };
+
+  const removeWalletTransfer = (transferId: string) => {
+    if (!activeShift) return;
+    const updatedTransfers = (activeShift.walletTransfers || []).filter(t => t.id !== transferId);
+    const totalWallet = updatedTransfers.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    setActiveShift({
+      ...activeShift,
+      walletTransfers: updatedTransfers,
+      totalWallet
+    });
+    addAuditLog('delete', 'تحويلات المحفظة بالوردية', `حذف تحويل محفظة إلكترونية`);
+  };
+
+  const closeShift = (params: {
+    leftInDrawer: number;
+    transferredToVault: number;
+    distributeToModules?: boolean;
+    notes?: string;
+    lockAccountOnClose?: boolean;
+  }): DrawerShift => {
+    if (!activeShift) throw new Error('لا توجد وردية مفتوحة حالياً');
+    const totalExp = activeShift.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalInsta = (activeShift.instaPayTransfers || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalWallet = (activeShift.walletTransfers || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const leftInDrawer = Number(params.leftInDrawer) || 0;
+    const transferredToVault = Number(params.transferredToVault) || 0;
+    
+    // Total Shift Sales = Expenses + InstaPay + Wallets + Left in Drawer + Transferred to Vault
+    const totalSales = totalExp + totalInsta + totalWallet + leftInDrawer + transferredToVault;
+
+    // By default, shifts require manager review before distribution
+    const isImmediatelyDistributed = params.distributeToModules === true && currentUser.role === 'manager';
+
+    const closedShift: DrawerShift = {
+      ...activeShift,
+      status: 'closed',
+      closedAt: new Date().toISOString(),
+      totalExpenses: totalExp,
+      totalInstaPay: totalInsta,
+      totalWallet: totalWallet,
+      totalSales,
+      leftInDrawer,
+      transferredToVault,
+      notes: params.notes !== undefined ? params.notes : activeShift.notes,
+      isApprovedByManager: isImmediatelyDistributed,
+      approvedAt: isImmediatelyDistributed ? new Date().toISOString() : undefined,
+      approvedBy: isImmediatelyDistributed ? currentUser.name : undefined,
+      distributedToModules: isImmediatelyDistributed
+    };
+
+    // Save to shifts history
+    setDrawerShifts(prev => [closedShift, ...prev.filter(s => s.id !== closedShift.id)]);
+    setActiveShift(null);
+
+    // If manager chose immediate distribution upon closing
+    if (isImmediatelyDistributed) {
+      executeShiftDistribution(closedShift);
+    }
+
+    addAuditLog(
+      'close_period',
+      'إقفال وردية درج',
+      `تم إقفال وردية ${closedShift.pharmacistName}: مبيعات ${totalSales} ج.م (المحول للخزينة ${closedShift.transferredToVault} ج.م، المتروك ${closedShift.leftInDrawer} ج.م، المنصرفات ${totalExp} ج.م، انستا ${totalInsta} ج.م، محفظة ${totalWallet} ج.م) - ${isImmediatelyDistributed ? 'تم ترحيلها للدفاتر' : 'بانتظار مراجعة واعتماد المدير'}`
+    );
+
+    // If lockAccountOnClose is requested (default for shift handover)
+    if (params.lockAccountOnClose) {
+      setTimeout(() => {
+        lockSession();
+      }, 500);
+    }
+
+    return closedShift;
+  };
+
+  // Helper to execute distribution of a closed shift to all corresponding modules
+  const executeShiftDistribution = (shift: DrawerShift) => {
+    const totalInsta = (shift.instaPayTransfers || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalWallet = (shift.walletTransfers || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+    // 1. Transferred Cash into Treasury Vault (recorded as income/cash-in for the shift)
+    if (shift.transferredToVault > 0) {
+      addIncomeRecord({
+        periodId: shift.periodId,
+        date: shift.date,
+        time: shift.time || '15:00',
+        shiftType: shift.shiftType,
+        amount: shift.transferredToVault,
+        cashierName: shift.pharmacistName,
+        notes: `توريد نقدية باليد للخزينة من وردية ${shift.dayName || ''} (${shift.shiftType === 'morning' ? 'صباحية' : shift.shiftType === 'evening' ? 'مسائية' : 'ليلية'}) - معتمد`
+      });
+    }
+
+    // 1.b InstaPay transfers during shift -> recorded into Digital Wallet module as InstaPay Income
+    if (totalInsta > 0) {
+      addWalletTransaction({
+        periodId: shift.periodId,
+        date: shift.date,
+        method: 'instapay',
+        inAmount: totalInsta,
+        outAmount: 0,
+        tag: 'مبيعات إنستاباي',
+        notes: `إجمالي تحويلات إنستاباي وردية ${shift.pharmacistName} (${shift.shiftType === 'morning' ? 'صباحية' : shift.shiftType === 'evening' ? 'مسائية' : 'ليلية'})`
+      });
+    }
+
+    // 1.c Wallet transfers during shift -> recorded into Digital Wallet module as Wallet Income
+    if (totalWallet > 0) {
+      addWalletTransaction({
+        periodId: shift.periodId,
+        date: shift.date,
+        method: 'wallet',
+        inAmount: totalWallet,
+        outAmount: 0,
+        tag: 'مبيعات المحفظة الإلكترونية',
+        notes: `إجمالي تحويلات المحفظة الإلكترونية وردية ${shift.pharmacistName} (${shift.shiftType === 'morning' ? 'صباحية' : shift.shiftType === 'evening' ? 'مسائية' : 'ليلية'})`
+      });
+    }
+
+    // 2. Outflow / Drawer Expenses distribution
+    for (const exp of shift.expenses) {
+      if (exp.category === 'supplier' && exp.targetEntityId) {
+        addSupplierPayment({
+          periodId: shift.periodId,
+          supplierId: exp.targetEntityId,
+          date: shift.date,
+          amount: exp.amount,
+          paymentMethod: 'cash',
+          notes: `سداد من درج النقدية - وردية ${shift.pharmacistName} (${exp.title})`
+        });
+      } else if (exp.category === 'employee_advance' && exp.targetEntityId) {
+        addEmployeeAdvance({
+          periodId: shift.periodId,
+          employeeId: exp.targetEntityId,
+          date: shift.date,
+          method: 'cash',
+          withdrawnAmount: exp.amount,
+          returnedAmount: 0,
+          notes: `سلفة نقدية من الدرج - وردية ${shift.pharmacistName} (${exp.title})`
+        });
+      } else if (exp.category === 'customer_debt' && exp.targetEntityId) {
+        addCustomerDebt({
+          periodId: shift.periodId,
+          customerId: exp.targetEntityId,
+          date: shift.date,
+          debit: exp.amount,
+          credit: 0,
+          notes: `دين عميل من درج النقدية - وردية ${shift.pharmacistName} (${exp.title})`
+        });
+      } else if (exp.category === 'wallet_instapay') {
+        addWalletTransaction({
+          periodId: shift.periodId,
+          date: shift.date,
+          method: 'wallet',
+          inAmount: 0,
+          outAmount: exp.amount,
+          tag: 'درج النقدية',
+          notes: `معاملة غير نقدية من الدرج - وردية ${shift.pharmacistName} (${exp.title})`
+        });
+      } else if (exp.category === 'partner_withdrawal' && exp.targetEntityId) {
+        addPersonalLedger({
+          periodId: shift.periodId,
+          partyId: exp.targetEntityId,
+          date: shift.date,
+          method: 'cash',
+          debit: exp.amount,
+          credit: 0,
+          notes: `مسحوبات شريك من الدرج - وردية ${shift.pharmacistName} (${exp.title})`
+        });
+      } else {
+        // Standard Expense or General Outflow
+        addExpense({
+          periodId: shift.periodId,
+          categoryId: exp.targetEntityId || expenseCategories[0]?.id || 'cat-1',
+          itemName: exp.title,
+          amount: exp.amount,
+          date: shift.date,
+          paymentMethod: 'cash',
+          notes: `منصرف من درج النقدية - وردية ${shift.pharmacistName}`
+        });
+      }
+    }
+  };
+
+  // المدير يراجع الوردية ويعتمد تحويلها وتوزيعها على موديولات التطبيق
+  const approveAndDistributeShift = (shiftId: string): { success: boolean; error?: string } => {
+    if (currentUser.role !== 'manager') {
+      return { success: false, error: 'عفواً، اعتماد وترحيل الورديات مقتصر على حساب المدير فقط.' };
+    }
+
+    const targetShift = drawerShifts.find(s => s.id === shiftId);
+    if (!targetShift) {
+      return { success: false, error: 'الوردية غير موجودة' };
+    }
+
+    if (targetShift.distributedToModules) {
+      return { success: false, error: 'تم ترحيل وتوزيع هذه الوردية مسبقاً' };
+    }
+
+    // Execute distribution
+    executeShiftDistribution(targetShift);
+
+    // Update shift status
+    const updatedShift: DrawerShift = {
+      ...targetShift,
+      isApprovedByManager: true,
+      approvedAt: new Date().toISOString(),
+      approvedBy: currentUser.name,
+      distributedToModules: true
+    };
+
+    setDrawerShifts(prev => prev.map(s => s.id === shiftId ? updatedShift : s));
+    addAuditLog('update', 'اعتماد وردية وترحيلها', `قام المدير ${currentUser.name} باعتماد وترحيل وردية الصيدلي ${targetShift.pharmacistName} بتاريخ ${targetShift.date}`);
+
+    return { success: true };
+  };
+
+  const reopenShift = (shiftId: string) => {
+    const shift = drawerShifts.find(s => s.id === shiftId);
+    if (!shift) return;
+    if (activeShift) {
+      alert('يوجد وردية مفتوحة حالياً! يرجى إقفال الوردية الحالية أولاً قبل فتح وردية سابقة.');
+      return;
+    }
+    const reopened: DrawerShift = {
+      ...shift,
+      status: 'open',
+      closedAt: undefined
+    };
+    setActiveShift(reopened);
+    setDrawerShifts(prev => prev.filter(s => s.id !== shiftId));
+    addAuditLog('update', 'إعادة فتح وردية', `تمت إعادة فتح وردية ${shift.pharmacistName} بتاريخ ${shift.date}`);
+  };
+
+  const deleteDrawerShift = (shiftId: string) => {
+    setDrawerShifts(prev => prev.filter(s => s.id !== shiftId));
+    addAuditLog('delete', 'سجل الورديات', `حذف وردية من الأرشيف`);
+  };
+
+  const lastClosedShift = useMemo(() => {
+    return drawerShifts.find(s => s.status === 'closed');
+  }, [drawerShifts]);
+
+  // Export / Import / Backup / Reset
+  const [lastBackupTime, setLastBackupTime] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(`${LOCAL_STORAGE_KEY}_last_backup_time`);
+    } catch {
+      return null;
+    }
+  });
+
+  const [localSnapshots, setLocalSnapshots] = useState<BackupSnapshot[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_snapshots`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const exportDataJson = (): string => {
-    const fullBackup = {
+    const totalRecords =
+      incomeRecords.length +
+      supplierPayments.length +
+      expenses.length +
+      walletTransactions.length +
+      personalLedgers.length +
+      customerDebts.length +
+      employeeAdvances.length;
+
+    const fullBackup: BackupPackage = {
+      appName: 'Pharmacy Treasury Management System',
+      version: '2.0',
+      exportedAt: new Date().toISOString(),
       pharmacyProfile,
       periods,
+      currentPeriodId,
       expenseCategories,
       suppliers,
       parties,
@@ -974,31 +1459,236 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       personalLedgers,
       customerDebts,
       employeeAdvances,
+      drawerShifts,
       auditLogs,
-      exportedAt: new Date().toISOString()
+      users,
+      stats: {
+        totalRecords,
+        periodsCount: periods.length,
+        suppliersCount: suppliers.length,
+        expensesCount: expenses.length,
+        incomeCount: incomeRecords.length,
+        walletCount: walletTransactions.length
+      }
     };
     return JSON.stringify(fullBackup, null, 2);
+  };
+
+  const createLocalSnapshot = (label?: string, reason: BackupSnapshot['reason'] = 'manual'): BackupSnapshot => {
+    const jsonStr = exportDataJson();
+    const totalRecs =
+      incomeRecords.length +
+      supplierPayments.length +
+      expenses.length +
+      walletTransactions.length +
+      personalLedgers.length +
+      customerDebts.length +
+      employeeAdvances.length;
+
+    const newSnapshot: BackupSnapshot = {
+      id: `snap-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: new Date().toISOString(),
+      label: label || `لقطة نقطة زمنية (${new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })})`,
+      reason,
+      recordsCount: totalRecs,
+      dataJson: jsonStr,
+      sizeBytes: new Blob([jsonStr]).size
+    };
+
+    setLocalSnapshots(prev => {
+      const updated = [newSnapshot, ...prev.filter(s => s.id !== newSnapshot.id)].slice(0, 12);
+      try {
+        localStorage.setItem(`${LOCAL_STORAGE_KEY}_snapshots`, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Could not save snapshot to localStorage:', e);
+      }
+      return updated;
+    });
+
+    addAuditLog('settings_update', 'إنشاء لقطة احتياطية محلية', newSnapshot.label);
+    return newSnapshot;
+  };
+
+  const restoreLocalSnapshot = (id: string): boolean => {
+    const snap = localSnapshots.find(s => s.id === id);
+    if (!snap) return false;
+    return importDataJson(snap.dataJson);
+  };
+
+  const deleteLocalSnapshot = (id: string) => {
+    setLocalSnapshots(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      try {
+        localStorage.setItem(`${LOCAL_STORAGE_KEY}_snapshots`, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+    addAuditLog('settings_update', 'حذف لقطة احتياطية', `تم حذف لقطة محلية`);
+  };
+
+  const clearAllSnapshots = () => {
+    setLocalSnapshots([]);
+    try {
+      localStorage.removeItem(`${LOCAL_STORAGE_KEY}_snapshots`);
+    } catch {
+      // ignore
+    }
+  };
+
+  const downloadBackupFile = (customFilename?: string) => {
+    try {
+      const jsonStr = exportDataJson();
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+      const safeName = (pharmacyProfile.name || 'صيدلية').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '');
+      const filename = customFilename || `نسخة_خزانة_${safeName}_${dateStr}_${timeStr}.json`;
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const timestamp = new Date().toISOString();
+      setLastBackupTime(timestamp);
+      try {
+        localStorage.setItem(`${LOCAL_STORAGE_KEY}_last_backup_time`, timestamp);
+      } catch {
+        // ignore
+      }
+
+      addAuditLog('settings_update', 'تصدير نسخة احتياطية', `تم تنزيل نسخة احتياطية كاملة: ${filename}`);
+
+      // Also record a local snapshot automatically
+      createLocalSnapshot(`تصدير ملف يدوي (${filename})`, 'manual');
+    } catch (e) {
+      console.error('Error downloading backup:', e);
+      alert('حدث خطأ أثناء تنزيل ملف النسخة الاحتياطية');
+    }
+  };
+
+  const inspectBackupJson = (jsonStr: string): { isValid: boolean; error?: string; metadata?: any } => {
+    try {
+      if (!jsonStr || typeof jsonStr !== 'string' || !jsonStr.trim()) {
+        return { isValid: false, error: 'الملف أو النص المدخل فارغ' };
+      }
+      const data = JSON.parse(jsonStr);
+      if (!data || typeof data !== 'object') {
+        return { isValid: false, error: 'تنسيق الملف غير صالح كملف JSON' };
+      }
+
+      const hasRecognizedField = !!(
+        data.pharmacyProfile ||
+        data.periods ||
+        data.incomeRecords ||
+        data.supplierPayments ||
+        data.expenses ||
+        data.walletTransactions ||
+        data.suppliers
+      );
+
+      if (!hasRecognizedField) {
+        return { isValid: false, error: 'الملف لا يحتوي على بيانات خاصة بنظام خزانة الصيدلية' };
+      }
+
+      const totalRecs =
+        (Array.isArray(data.incomeRecords) ? data.incomeRecords.length : 0) +
+        (Array.isArray(data.supplierPayments) ? data.supplierPayments.length : 0) +
+        (Array.isArray(data.expenses) ? data.expenses.length : 0) +
+        (Array.isArray(data.walletTransactions) ? data.walletTransactions.length : 0) +
+        (Array.isArray(data.personalLedgers) ? data.personalLedgers.length : 0) +
+        (Array.isArray(data.customerDebts) ? data.customerDebts.length : 0) +
+        (Array.isArray(data.employeeAdvances) ? data.employeeAdvances.length : 0);
+
+      const metadata = {
+        pharmacyName: data.pharmacyProfile?.name || 'صيدلية غير محددة',
+        currency: data.pharmacyProfile?.currency || 'ج.م',
+        version: data.version || '1.0',
+        exportedAt: data.exportedAt || null,
+        periodsCount: Array.isArray(data.periods) ? data.periods.length : 0,
+        periodsNames: Array.isArray(data.periods) ? data.periods.map((p: any) => p.name || p.id).join('، ') : '',
+        totalRecords: totalRecs,
+        incomeCount: Array.isArray(data.incomeRecords) ? data.incomeRecords.length : 0,
+        suppliersCount: Array.isArray(data.supplierPayments) ? data.supplierPayments.length : 0,
+        expensesCount: Array.isArray(data.expenses) ? data.expenses.length : 0,
+        walletCount: Array.isArray(data.walletTransactions) ? data.walletTransactions.length : 0,
+        customersCount: Array.isArray(data.customerDebts) ? data.customerDebts.length : 0,
+        employeesCount: Array.isArray(data.employeeAdvances) ? data.employeeAdvances.length : 0,
+        usersCount: Array.isArray(data.users) ? data.users.length : 0,
+      };
+
+      return { isValid: true, metadata };
+    } catch (e: any) {
+      return { isValid: false, error: 'فشل قراءة الملف: ' + (e.message || 'خطأ في بنية JSON') };
+    }
   };
 
   const importDataJson = (jsonStr: string): boolean => {
     try {
       const data = JSON.parse(jsonStr);
+
+      // Create a safety snapshot of current data before overwriting!
+      try {
+        const currentJson = exportDataJson();
+        const totalRecs =
+          incomeRecords.length +
+          supplierPayments.length +
+          expenses.length +
+          walletTransactions.length +
+          personalLedgers.length +
+          customerDebts.length +
+          employeeAdvances.length;
+
+        const safetySnap: BackupSnapshot = {
+          id: `snap-safety-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          label: 'نقطة أمان تلقائية قبل الاستعادة (Safety Checkpoint)',
+          reason: 'pre_restore',
+          recordsCount: totalRecs,
+          dataJson: currentJson,
+          sizeBytes: new Blob([currentJson]).size
+        };
+
+        setLocalSnapshots(prev => {
+          const updated = [safetySnap, ...prev.filter(s => s.id !== safetySnap.id)].slice(0, 12);
+          try {
+            localStorage.setItem(`${LOCAL_STORAGE_KEY}_snapshots`, JSON.stringify(updated));
+          } catch {
+            // ignore
+          }
+          return updated;
+        });
+      } catch (err) {
+        console.warn('Could not create safety snapshot before import:', err);
+      }
+
       if (data.pharmacyProfile) setPharmacyProfile(data.pharmacyProfile);
-      if (data.periods) setPeriods(data.periods);
-      if (data.expenseCategories) setExpenseCategories(data.expenseCategories);
-      if (data.suppliers) setSuppliers(data.suppliers);
-      if (data.parties) setParties(data.parties);
-      if (data.customers) setCustomers(data.customers);
-      if (data.employees) setEmployees(data.employees);
-      if (data.incomeRecords) setIncomeRecords(data.incomeRecords);
-      if (data.supplierPayments) setSupplierPayments(data.supplierPayments);
-      if (data.expenses) setExpenses(data.expenses);
-      if (data.walletTransactions) setWalletTransactions(data.walletTransactions);
-      if (data.personalLedgers) setPersonalLedgers(data.personalLedgers);
-      if (data.customerDebts) setCustomerDebts(data.customerDebts);
-      if (data.employeeAdvances) setEmployeeAdvances(data.employeeAdvances);
-      if (data.auditLogs) setAuditLogs(data.auditLogs);
-      addAuditLog('settings_update', 'استرجاع نسخة احتياطية', 'تم استرجاع البيانات بنجاح من ملف خارجي');
+      if (data.periods && Array.isArray(data.periods)) setPeriods(data.periods);
+      if (data.currentPeriodId) setCurrentPeriodId(data.currentPeriodId);
+      if (data.expenseCategories && Array.isArray(data.expenseCategories)) setExpenseCategories(data.expenseCategories);
+      if (data.suppliers && Array.isArray(data.suppliers)) setSuppliers(data.suppliers);
+      if (data.parties && Array.isArray(data.parties)) setParties(data.parties);
+      if (data.customers && Array.isArray(data.customers)) setCustomers(data.customers);
+      if (data.employees && Array.isArray(data.employees)) setEmployees(data.employees);
+      if (data.incomeRecords && Array.isArray(data.incomeRecords)) setIncomeRecords(data.incomeRecords);
+      if (data.supplierPayments && Array.isArray(data.supplierPayments)) setSupplierPayments(data.supplierPayments);
+      if (data.expenses && Array.isArray(data.expenses)) setExpenses(data.expenses);
+      if (data.walletTransactions && Array.isArray(data.walletTransactions)) setWalletTransactions(data.walletTransactions);
+      if (data.personalLedgers && Array.isArray(data.personalLedgers)) setPersonalLedgers(data.personalLedgers);
+      if (data.customerDebts && Array.isArray(data.customerDebts)) setCustomerDebts(data.customerDebts);
+      if (data.employeeAdvances && Array.isArray(data.employeeAdvances)) setEmployeeAdvances(data.employeeAdvances);
+      if (data.drawerShifts && Array.isArray(data.drawerShifts)) setDrawerShifts(data.drawerShifts);
+      if (data.auditLogs && Array.isArray(data.auditLogs)) setAuditLogs(data.auditLogs);
+      if (data.users && Array.isArray(data.users)) setUsers(data.users);
+
+      addAuditLog('settings_update', 'استرجاع نسخة احتياطية', 'تم استرجاع البيانات بنجاح مع أخذ نقطة أمان للتراجع');
       return true;
     } catch (e) {
       console.error('Import error', e);
@@ -1152,6 +1842,8 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setPersonalLedgers(initialPersonalLedgers);
     setCustomerDebts(initialCustomerDebts);
     setEmployeeAdvances(initialEmployeeAdvances);
+    setDrawerShifts(initialDrawerShifts);
+    setActiveShift(null);
     setAuditLogs(initialAuditLogs);
     setUsers(initialUsers);
     setCurrentUserId('user-manager');
@@ -1222,11 +1914,34 @@ export const TreasuryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addEmployeeAdvance,
         updateEmployeeAdvance,
         deleteEmployeeAdvance,
+        drawerShifts,
+        activeShift,
+        openShift,
+        updateActiveShift,
+        addDrawerExpense,
+        removeDrawerExpense,
+        addInstaPayTransfer,
+        removeInstaPayTransfer,
+        addWalletTransfer,
+        removeWalletTransfer,
+        closeShift,
+        reopenShift,
+        deleteDrawerShift,
+        approveAndDistributeShift,
+        lastClosedShift,
         summary,
         getPeriodSummary,
         auditLogs,
         exportDataJson,
         importDataJson,
+        downloadBackupFile,
+        inspectBackupJson,
+        localSnapshots,
+        createLocalSnapshot,
+        restoreLocalSnapshot,
+        deleteLocalSnapshot,
+        clearAllSnapshots,
+        lastBackupTime,
         resetToDefaults,
         users,
         currentUser,

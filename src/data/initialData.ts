@@ -14,7 +14,8 @@ import {
   CustomerDebtRecord,
   EmployeeAdvanceRecord,
   AuditLog,
-  AppUser
+  AppUser,
+  DrawerShift
 } from '../types';
 
 export const initialPharmacyProfile: PharmacyProfile = {
@@ -655,6 +656,14 @@ export const initialCustomers: Customer[] = [
 ];
 
 export const initialEmployees: Employee[] = [
+  {
+    "id": "emp-0",
+    "name": "د. جهاد",
+    "jobTitle": "صيدلي",
+    "phone": "",
+    "maxAdvanceLimit": 20000,
+    "createdAt": "2026-08-01"
+  },
   {
     "id": "emp-1",
     "name": "د. هنيدي",
@@ -6717,38 +6726,184 @@ export const initialUsers: AppUser[] = [
     name: "أ. محمود (المحاسب المالي)",
     username: "accountant",
     role: "accountant",
-    pin: "2222",
+    pin: "5555",
     jobTitle: "المحاسب المالي",
     avatarColor: "blue",
-    phone: "01123456789",
+    phone: "01099887766",
     createdAt: "2026-08-01T00:00:00"
   },
   {
-    id: "user-pharmacist",
-    name: "د. سارة (صيدلي الوردية)",
-    username: "pharmacist",
+    id: "user-jihad",
+    name: "دكتورة جهاد",
+    username: "jihad",
     role: "pharmacist",
-    pin: "3333",
-    jobTitle: "صيدلي مسؤول وردية",
-    avatarColor: "purple",
-    phone: "01234567890",
+    pin: "1234",
+    jobTitle: "صيدلي",
+    avatarColor: "teal",
+    phone: "01011223344",
     createdAt: "2026-08-01T00:00:00",
     customPermissions: {
       dashboard: false,
-      income: true,
+      drawer: true,
+      income: false,
       suppliers: false,
       expenses: false,
       wallet: false,
       personal: false,
-      customers: true,
+      customers: false,
       employees: false,
       report: false,
+      profile: true,
       settings: false,
       users: false,
-      quickEntry: true,
+      quickEntry: false,
       closePeriod: false,
-      deleteRecords: false
+      deleteRecords: false,
+      backup: false
+    }
+  },
+  {
+    id: "user-hassan",
+    name: "دكتور حسن",
+    username: "hassan",
+    role: "pharmacist",
+    pin: "4444",
+    jobTitle: "صيدلي",
+    avatarColor: "purple",
+    phone: "01044556677",
+    createdAt: "2026-08-01T00:00:00",
+    customPermissions: {
+      dashboard: false,
+      drawer: true,
+      income: false,
+      suppliers: false,
+      expenses: false,
+      wallet: false,
+      personal: false,
+      customers: false,
+      employees: false,
+      report: false,
+      profile: true,
+      settings: false,
+      users: false,
+      quickEntry: false,
+      closePeriod: false,
+      deleteRecords: false,
+      backup: false
+    }
+  },
+  {
+    id: "user-adham",
+    name: "دكتور أدهم",
+    username: "adham",
+    role: "pharmacist",
+    pin: "3333",
+    jobTitle: "صيدلي",
+    avatarColor: "indigo",
+    phone: "01033445566",
+    createdAt: "2026-08-01T00:00:00",
+    customPermissions: {
+      dashboard: false,
+      drawer: true,
+      income: false,
+      suppliers: false,
+      expenses: false,
+      wallet: false,
+      personal: false,
+      customers: false,
+      employees: false,
+      report: false,
+      profile: true,
+      settings: false,
+      users: false,
+      quickEntry: false,
+      closePeriod: false,
+      deleteRecords: false,
+      backup: false
+    }
+  },
+  {
+    id: "user-henady",
+    name: "دكتور هنيدي",
+    username: "henady",
+    role: "pharmacist",
+    pin: "2222",
+    jobTitle: "صيدلي",
+    avatarColor: "blue",
+    phone: "01022334455",
+    createdAt: "2026-08-01T00:00:00",
+    customPermissions: {
+      dashboard: false,
+      drawer: true,
+      income: false,
+      suppliers: false,
+      expenses: false,
+      wallet: false,
+      personal: false,
+      customers: false,
+      employees: false,
+      report: false,
+      profile: true,
+      settings: false,
+      users: false,
+      quickEntry: false,
+      closePeriod: false,
+      deleteRecords: false,
+      backup: false
     }
   }
 ];
+
+export const initialDrawerShifts: DrawerShift[] = [
+  {
+    id: "shift-sample-1",
+    periodId: "2026-08",
+    date: "2026-08-28",
+    time: "15:30",
+    dayName: "الجمعة",
+    pharmacistName: "د. حسن",
+    pharmacistId: "user-hassan",
+    shiftType: "morning",
+    openingBalance: 500,
+    status: "closed",
+    openedAt: "2026-08-28T08:00:00",
+    closedAt: "2026-08-28T15:30:00",
+    expenses: [
+      {
+        id: "exp-shift-1",
+        shiftId: "shift-sample-1",
+        title: "سداد شركة المتحدون للأدوية",
+        amount: 250,
+        category: "supplier",
+        targetEntityId: "sup-1",
+        createdAt: "2026-08-28T10:15:00"
+      },
+      {
+        id: "exp-shift-2",
+        shiftId: "shift-sample-1",
+        title: "نظافة وطلبات بوفيه الصيدلية",
+        amount: 45,
+        category: "expense",
+        targetEntityId: "cat-1",
+        createdAt: "2026-08-28T11:40:00"
+      },
+      {
+        id: "exp-shift-3",
+        shiftId: "shift-sample-1",
+        title: "سلفة كابتن أحمد دليفري",
+        amount: 80,
+        category: "employee_advance",
+        targetEntityId: "emp-1",
+        createdAt: "2026-08-28T13:10:00"
+      }
+    ],
+    totalExpenses: 375,
+    leftInDrawer: 525,
+    transferredToVault: 2150,
+    notes: "تم تسليم الإيراد النقدي للخزينة وترك 525 ج.م رصيد افتتاحي للوردية المسائية",
+    isApprovedByManager: false,
+    distributedToModules: false
+  }
+];
+
 

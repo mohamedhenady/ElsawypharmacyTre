@@ -11,7 +11,8 @@ import {
   Briefcase,
   FileSpreadsheet,
   Settings,
-  User
+  User,
+  Vault
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -28,7 +29,9 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab 
     walletTransactions,
     personalLedgers,
     customerDebts,
-    employeeAdvances
+    employeeAdvances,
+    drawerShifts,
+    activeShift
   } = useTreasury();
 
   const countIncome = incomeRecords.filter(r => r.periodId === currentPeriodId).length;
@@ -38,12 +41,20 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab 
   const countPersonal = personalLedgers.filter(r => r.periodId === currentPeriodId).length;
   const countCustomers = customerDebts.filter(r => r.periodId === currentPeriodId).length;
   const countEmployees = employeeAdvances.filter(r => r.periodId === currentPeriodId).length;
+  const countDrawer = drawerShifts.length + (activeShift ? 1 : 0);
 
   const navItems = [
     {
       id: 'dashboard',
       label: 'لوحة الخزانة والتسوية',
       icon: LayoutDashboard,
+      highlight: true
+    },
+    {
+      id: 'drawer',
+      label: 'مصروفات درج النقدية والورديات',
+      icon: Vault,
+      count: activeShift ? 1 : undefined,
       highlight: true
     },
     {
